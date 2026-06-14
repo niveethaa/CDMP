@@ -17,6 +17,8 @@
     "test": "jest --runInBand",
     "seed:parties": "node src/scripts/seedPoliticalParties.js",
     "import:donations": "node src/scripts/importDonations.js",
-    "check:data": "node src/scripts/checkImportedData.js"
+    "check:data": "node src/scripts/checkImportedData.js",
+    "seed:regions": "node src/scripts/seedRegions.js",
+    "build:region-stats": "node src/scripts/buildRegionStats.js"
   }
 }
