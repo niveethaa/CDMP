@@ -25,3 +25,8 @@ cypress/videos/
 
 # OS files
 .DS_Store
+
+# Local raw data files
+data/
+server/data/
+*.zip
