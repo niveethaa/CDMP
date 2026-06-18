@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import DonationMap from "../components/Map/DonationMap";
 import RegionSummaryPanel from "../components/Summary/RegionSummaryPanel";
+import DonationFilters from "../components/Filters/DonationFilters";
 import {
   fetchNationalStats,
   fetchAllProvinceStats,
@@ -34,6 +35,13 @@ export default function HomePage() {
   const [mapError, setMapError] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+
+  const [filters, setFilters] = useState({
+    partyCode: "ALL",
+    beginningYear: 2004,
+    endingYear: 2024,
+  });
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -99,6 +107,46 @@ export default function HomePage() {
     handleSelectProvince(code);
   }
 
+  // Re-scope the selected region's stats by the active filters (client-side).
+  const displayedStats = useMemo(() => {
+    if (!selectedStats) return selectedStats;
+    const { partyCode, beginningYear, endingYear } = filters;
+    const isDefault =
+      partyCode === "ALL" && beginningYear === 2004 && endingYear === 2024;
+    if (isDefault) return selectedStats;
+
+    // Trend: keep only years in range
+    const trend = (selectedStats.donationsTrend || []).filter(
+      (t) => t.year >= beginningYear && t.year <= endingYear
+    );
+
+    // Totals: re-sum from the in-range trend
+    const totalDonations = trend.reduce((s, t) => s + (t.totalDonations || 0), 0);
+    const donationCount = trend.reduce((s, t) => s + (t.donationCount || 0), 0);
+    const donorCount = trend.reduce((s, t) => s + (t.donorCount || 0), 0);
+    const averageDonation = donationCount > 0 ? totalDonations / donationCount : 0;
+
+    // Party breakdown: isolate one party if selected (totals are all-years)
+    let partyStats = selectedStats.partyStats || [];
+    if (partyCode !== "ALL") {
+      partyStats = partyStats.filter((p) => p.partyCode === partyCode);
+    }
+
+    return {
+      ...selectedStats,
+      donationsTrend: trend,
+      totals: {
+        ...selectedStats.totals,
+        totalDonations,
+        donationCount,
+        donorCount,
+        averageDonation,
+      },
+      partyStats,
+      _filtered: { partyCode, beginningYear, endingYear },
+    };
+  }, [selectedStats, filters]);
+
   if (initialLoading) {
     return (
       <div className="cdmp-fullscreen">
@@ -107,6 +155,7 @@ export default function HomePage() {
       </div>
     );
   }
+
 
   if (mapError) {
     return (
@@ -152,7 +201,21 @@ export default function HomePage() {
             )}
           </div>
 
-          <button className="nav-btn">Filters</button>
+          <div className="filters-wrap">
+            <button
+              className="nav-btn"
+              onClick={() => setFiltersOpen((o) => !o)}
+            >
+              Filters
+            </button>
+            {filtersOpen && (
+              <DonationFilters
+                filters={filters}
+                onApply={setFilters}
+                onClose={() => setFiltersOpen(false)}
+              />
+            )}
+          </div>
           <button className="nav-btn nav-btn--primary">🔒 Research Login</button>
         </div>
       </header>
@@ -174,7 +237,7 @@ export default function HomePage() {
 
         <aside className="side-panel">
           <RegionSummaryPanel
-            stats={selectedStats}
+            stats={displayedStats}
             onBack={handleBackToNational}
             loading={panelLoading}
           />
