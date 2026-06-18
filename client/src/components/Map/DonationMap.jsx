@@ -65,13 +65,26 @@ export default function DonationMap({
   const leafletMap = useRef(null);
   const geoJsonLayer = useRef(null);
   const [geoData, setGeoData] = useState(null);
+  const [geoError, setGeoError] = useState(false);
 
   // Load GeoJSON once
-  useEffect(() => {
+   useEffect(() => {
+    let cancelled = false;
     fetch("/data/canada-provinces.json")
-      .then((r) => r.json())
-      .then(setGeoData)
-      .catch((e) => console.error("Failed to load GeoJSON:", e));
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        if (!cancelled) setGeoData(data);
+      })
+      .catch((e) => {
+        console.error("Failed to load GeoJSON:", e);
+        if (!cancelled) setGeoError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Init Leaflet map once
@@ -157,24 +170,40 @@ export default function DonationMap({
     }).addTo(leafletMap.current);
   }, [geoData, provinceStats, selectedCode, onSelectProvince]);
 
-  return (
+ return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
 
-      {/* Legend */}
-      <div className="map-legend">
-        <div className="legend-title">Dominant party · Shade = volume</div>
-        <div className="legend-items">
-          {Object.entries(PARTY_COLORS)
-            .filter(([k]) => k !== "UNKNOWN")
-            .map(([code, color]) => (
-              <div key={code} className="legend-item">
-                <span className="legend-dot" style={{ background: color }} />
-                <span>{code}</span>
-              </div>
-            ))}
+      {!geoData && !geoError && (
+        <div className="map-overlay">
+          <div className="map-overlay-spinner" />
+          <p>Loading map…</p>
         </div>
-      </div>
+      )}
+
+      {geoError && (
+        <div className="map-overlay map-overlay--error">
+          <div className="map-overlay-icon">🗺️</div>
+          <p>We couldn't load the map right now.</p>
+          <p className="map-overlay-sub">Please try refreshing the page.</p>
+        </div>
+      )}
+
+      {geoData && !geoError && (
+        <div className="map-legend">
+          <div className="legend-title">Dominant party · Shade = volume</div>
+          <div className="legend-items">
+            {Object.entries(PARTY_COLORS)
+              .filter(([k]) => k !== "UNKNOWN")
+              .map(([code, color]) => (
+                <div key={code} className="legend-item">
+                  <span className="legend-dot" style={{ background: color }} />
+                  <span>{code}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
