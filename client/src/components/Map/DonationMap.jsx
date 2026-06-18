@@ -56,7 +56,7 @@ function formatDollars(amount) {
   return `$${Number(amount || 0).toFixed(0)}`;
 }
 
-export default function CanadaMap({
+export default function DonationMap({
   provinceStats,
   selectedCode,
   onSelectProvince,

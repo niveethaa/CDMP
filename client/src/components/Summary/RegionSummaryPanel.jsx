@@ -18,7 +18,7 @@ function formatNumber(n) {
   return Number(n || 0).toLocaleString("en-CA");
 }
 
-export default function RegionPanel({ stats, onBack, loading }) {
+export default function RegionSummaryPanel({ stats, onBack, loading }) {
   if (loading) {
     return (
       <div className="panel-state">
