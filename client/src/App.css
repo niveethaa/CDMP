@@ -161,6 +161,15 @@ body {
   cursor: pointer;
   transition: background 0.1s;
 }
+.search-dropdown li.search-noresult {
+  color: #64748b;
+  cursor: default;
+  font-style: italic;
+}
+.search-dropdown li.search-noresult:hover {
+  background: transparent;
+  color: #64748b;
+}
 .search-dropdown li:hover { background: #1e2235; color: #f1f5f9; }
 .search-dropdown li strong { color: #f1f5f9; }
 

@@ -137,13 +137,17 @@ export default function HomePage() {
               onChange={handleSearch}
               aria-label="Search region"
             />
-            {searchResults.length > 0 && (
+           {searchQuery.trim() && (
               <ul className="search-dropdown">
-                {searchResults.map(([code, name]) => (
-                  <li key={code} onClick={() => handleSearchSelect(code)}>
-                    <strong>{code}</strong> — {name}
-                  </li>
-                ))}
+                {searchResults.length > 0 ? (
+                  searchResults.map(([code, name]) => (
+                    <li key={code} onClick={() => handleSearchSelect(code)}>
+                      <strong>{code}</strong> — {name}
+                    </li>
+                  ))
+                ) : (
+                  <li className="search-noresult">No regions found</li>
+                )}
               </ul>
             )}
           </div>
