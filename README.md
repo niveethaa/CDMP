@@ -50,8 +50,7 @@
 [Project Proposal](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/2bf47786fab6db0c04cd764defef6ed6fef8bc2c/documentation/CDMP_Proposal_TeamNACSS.pdf)
 
 
-Class Diagram
-Link: (To Be Added)
+[Class Diagram](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/de387c03ae2ed5104b761832b5a420d1a4761372/documentation/ClassDiagram.png)
 
 ## Software Releases
 (To be Added)
