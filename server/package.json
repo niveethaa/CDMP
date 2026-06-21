@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "cors": "^2.8.6",
+    "csv-parse": "^6.2.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.7.0"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
+  },
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "test": "jest --runInBand",
+    "seed:parties": "node src/scripts/seedPoliticalParties.js",
+    "import:donations": "node src/scripts/importDonations.js",
+    "check:data": "node src/scripts/checkImportedData.js",
+    "seed:regions": "node src/scripts/seedRegions.js",
+    "build:region-stats": "node src/scripts/buildRegionStats.js"
+  }
+}
