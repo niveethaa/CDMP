@@ -140,7 +140,7 @@ export default function DonationMap({
             ${total ? `<div class="tooltip-total">${formatDollars(total)}</div>` : ""}
             ${donors ? `<div class="tooltip-sub">${Number(donors).toLocaleString("en-CA")} donors</div>` : ""}
             ${dominant ? `<div class="tooltip-party" style="color:${PARTY_COLORS[dominant.partyCode] || "#aaa"}">${dominant.partyCode} dominant</div>` : ""}
-            <div class="tooltip-hint">Click to explore →</div>
+            <div class="tooltip-hint">Click to explore</div>
           </div>`,
           {
             permanent: false,
@@ -183,7 +183,6 @@ export default function DonationMap({
 
       {geoError && (
         <div className="map-overlay map-overlay--error">
-          <div className="map-overlay-icon">🗺️</div>
           <p>We couldn't load the map right now.</p>
           <p className="map-overlay-sub">Please try refreshing the page.</p>
         </div>

@@ -31,7 +31,6 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
   if (!stats) {
     return (
       <div className="panel-state panel-empty">
-        <div className="panel-empty-icon">📍</div>
         <p>Click any province or territory on the map to explore its donation data.</p>
       </div>
     );
@@ -58,14 +57,14 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
         </div>
         {!isNational && (
           <button className="back-btn" onClick={onBack}>
-            ← Canada
+            Canada
           </button>
         )}
       </div>
 
       {privacy?.isSuppressed && (
         <div className="suppression-notice">
-          ⚠️ {privacy.suppressionReason}
+          {privacy.suppressionReason}
         </div>
       )}
 
@@ -191,6 +190,15 @@ function TrendLineChart({ data, maxTrend }) {
         );
       })}
 
+      {/* Y-axis title (rotated) */}
+      <text
+        className="trend-axis-title"
+        transform={`translate(10 ${padTop + plotH / 2}) rotate(-90)`}
+        textAnchor="middle"
+      >
+        Donations
+      </text>
+
       {/* Axis lines */}
       <line x1={baseX} y1={padTop} x2={baseX} y2={baseY} className="trend-axis" />
       <line x1={baseX} y1={baseY} x2={W - padRight} y2={baseY} className="trend-axis" />
@@ -234,6 +242,16 @@ function TrendLineChart({ data, maxTrend }) {
           </g>
         ) : null
       )}
+
+      {/* X-axis title */}
+      <text
+        className="trend-axis-title"
+        x={baseX + plotW / 2}
+        y={H - 2}
+        textAnchor="middle"
+      >
+        Year
+      </text>
     </svg>
   );
 }

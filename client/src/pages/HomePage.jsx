@@ -160,7 +160,7 @@ export default function HomePage() {
   if (mapError) {
     return (
       <div className="cdmp-fullscreen cdmp-fullscreen--error">
-        <p>⚠️ The donation map is currently unavailable.</p>
+        <p>The donation map is currently unavailable.</p>
         <p>Make sure the server is running on port 5001.</p>
       </div>
     );
@@ -170,14 +170,12 @@ export default function HomePage() {
     <div className="cdmp-root">
       <header className="cdmp-nav">
         <div className="nav-left">
-          <span className="nav-logo">📍</span>
           <span className="nav-brand">CDMP</span>
           <span className="nav-tagline">Canadian Donations Mapping Platform</span>
         </div>
 
         <div className="nav-right">
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
             <input
               className="search-input"
               type="text"
@@ -216,7 +214,7 @@ export default function HomePage() {
               />
             )}
           </div>
-          <button className="nav-btn nav-btn--primary">🔒 Research Login</button>
+          <button className="nav-btn nav-btn--primary">Research Login</button>
         </div>
       </header>
 
@@ -230,7 +228,7 @@ export default function HomePage() {
 
           {selectedCode && (
             <button className="map-back-btn" onClick={handleBackToNational}>
-              🇨🇦 All of Canada
+              All of Canada
             </button>
           )}
         </div>

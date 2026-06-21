@@ -72,7 +72,6 @@ body {
   align-items: center;
   gap: 10px;
 }
-.nav-logo  { font-size: 20px; }
 .nav-brand {
   font-size: 15px;
   font-weight: 700;
@@ -116,18 +115,11 @@ body {
   display: flex;
   align-items: center;
 }
-.search-icon {
-  position: absolute;
-  left: 10px;
-  font-size: 12px;
-  pointer-events: none;
-  z-index: 1;
-}
 .search-input {
   background: #1e2235;
   border: 1px solid #2e3550;
   color: #f1f5f9;
-  padding: 6px 12px 6px 30px;
+  padding: 6px 12px;
   border-radius: 6px;
   font-size: 13px;
   width: 200px;
@@ -316,7 +308,6 @@ body {
   font-size: 14px;
   line-height: 1.5;
 }
-.panel-empty-icon { font-size: 32px; }
 .panel-spinner {
   width: 28px;
   height: 28px;
@@ -556,7 +547,6 @@ body {
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
 }
-.map-overlay-icon { font-size: 30px; }
 .map-overlay-sub { font-size: 12px; color: #64748b; }
 
 .filters-wrap { position: relative; }
@@ -721,11 +711,6 @@ body {
 .map-legend { border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
 
 /* ── Empty / loading states ── */
-.panel-empty-icon {
-  font-size: 34px;
-  opacity: 0.9;
-  animation: pp-float 3s ease-in-out infinite;
-}
 .panel-empty p { max-width: 220px; }
 
 /* ── Dropdown / popover entrance ── */
@@ -737,10 +722,6 @@ body {
 @keyframes pp-fadeUp {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes pp-float {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-6px); }
 }
 /* Popover container */
 .filters-popover {
