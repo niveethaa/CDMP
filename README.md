@@ -1,119 +1,71 @@
-# course-project-nacss
+## Project Overview
 
-This repository was created through GitHub Classroom for the NACSS course project.
 
-## Tech Stack
+## Description
 
-- Front-end: React
-- Back-end: Express
-- Database: MongoDB
-- Testing: Jest and Cypress
+**Product Name**: CDMP (Canadian Donation Map)
 
-## Project Structure
+**Description**: CDMP is a web application that makes Canada's federal political donation data accessible and easy to explore. Public users can filter aggregated donations by party, time period, geographic level through an interactive map, while authenticated university researchers can access individual-level donation records through a secure login.
 
-```txt
-course-project-nacss/
-  client/    # React front-end
-  server/    # Express back-end
-  README.md
-```
+**Product Screenshot**:
 
-## Prerequisites
+(To be Added)
 
-Make sure you have the following installed:
 
-- Node.js
-- npm
-- MongoDB connection string or local MongoDB setup
+## Team Information
 
-## Front-end Setup
+**Team Name**: NACSS
 
-```bash
-cd client
-npm install
-npm run dev
-```
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Email</th>
+  </tr>
+  <tr>
+    <td>Calvin Liew</td>
+    <td>calvin.liew@mail.utoronto.ca</td>
+  </tr>
+  <tr>
+    <td>Shahveer Rasool</td>
+    <td>shahveer.rasool@mail.utoronto.ca</td>
+  </tr>
+  <tr>
+    <td>Shamrita Saravanakumar</td>
+    <td>shamrita.saravanakumar@mail.utoronto.ca</td>
+  </tr>
+  <tr>
+    <td>Abdul Hameed Mohammed</td>
+    <td>abdulmus.mohammed@mail.utoronto.ca</td>
+  </tr>
+  <tr>
+    <td>Niveetha Sivakaran</td>
+    <td>niveetha.sivakaran@mail.utoronto.ca</td>
+  </tr>
+</table>
 
-The React app runs at:
+## Project Artifacts
 
-```txt
-http://localhost:5173
-```
 
-## Back-end Setup
+## Design Documents
+[Project Proposal](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/2bf47786fab6db0c04cd764defef6ed6fef8bc2c/documentation/CDMP_Proposal_TeamNACSS.pdf)
 
-```bash
-cd server
-npm install
-npm run dev
-```
 
-The Express API runs at:
+[Class Diagram](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/de387c03ae2ed5104b761832b5a420d1a4761372/documentation/ClassDiagram.png)
 
-```txt
-http://localhost:5000
-```
+## Software Releases
+(To be Added)
 
-Health check route:
 
-```txt
-GET /api/health
-```
+## Meeting Minutes
+**Demo Meeting Notes**
+- Demo Meeting 1
+Link: (To be Added)
 
-Expected response:
 
-```json
-{
-  "status": "ok",
-  "message": "API is running"
-}
-```
+**Standup Meeting Notes**
+- [Standup Meeting May 23 - May 21](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/2bf47786fab6db0c04cd764defef6ed6fef8bc2c/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_May23-May31.pdf)
+- [Standup Meeting Jun 1 - Jun 7](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/2bf47786fab6db0c04cd764defef6ed6fef8bc2c/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes-Jun1-Jun7.pdf) 
+- [Standup Meeting Jun 8 - Jun 14](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/2bf47786fab6db0c04cd764defef6ed6fef8bc2c/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_Jun8-Jun14.pdf)
 
-## Environment Variables
 
-Create a `.env` file inside the `server/` folder:
 
-```env
-PORT=5000
-MONGODB_URI=your_mongodb_connection_string_here
-```
-
-Do not commit the `.env` file.
-
-## Running Tests
-
-### Back-end Tests
-
-```bash
-cd server
-npm test
-```
-
-### Cypress Tests
-
-Start the React app first:
-
-```bash
-cd client
-npm run dev
-```
-
-Then open Cypress:
-
-```bash
-npm run cypress:open
-```
-
-Or run Cypress in the terminal:
-
-```bash
-npm run cypress:run
-```
-
-## Current Status
-
-- React app setup complete
-- Express server setup complete
-- MongoDB configuration added
-- Jest test setup complete
-- Cypress test setup complete
