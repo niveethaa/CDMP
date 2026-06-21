@@ -1,10 +1,6 @@
-function App() {
-  return (
-    <main>
-      <h1>App is running</h1>
-      <p>React front end setup is complete for NACSS.</p>
-    </main>
-  );
-}
+import HomePage from "./pages/HomePage";
+import "./App.css";
 
-export default App;
+export default function App() {
+  return <HomePage />;
+}
