@@ -1,6 +1,5 @@
 ## Project Overview
 
-
 ## Description
 
 **Product Name**: CDMP (Canadian Donation Map)
