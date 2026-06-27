@@ -11,6 +11,7 @@ const ImportDataBatch = require("../models/ImportDataBatch");
 const PoliticalParty = require("../models/PoliticalParty");
 const Region = require("../models/Region");
 const RegionStat = require("../models/RegionStat");
+const BoundarySet = require("../models/BoundarySet");
 
 function money(value) {
   return "$" + Number(value || 0).toFixed(2);
@@ -30,6 +31,7 @@ async function checkImportedData() {
     const importBatchCount = await ImportDataBatch.countDocuments();
     const regionCount = await Region.countDocuments();
     const regionStatCount = await RegionStat.countDocuments();
+    const boundarySetCount = await BoundarySet.countDocuments();
 
     console.log("\nCDMP MongoDB Data Check");
     console.log("=======================");
@@ -38,6 +40,27 @@ async function checkImportedData() {
     console.log("Import batches:", importBatchCount);
     console.log("Regions:", regionCount);
     console.log("Region stats:", regionStatCount);
+    console.log("Boundary sets:", boundarySetCount);
+
+    const boundarySets = await BoundarySet.find()
+      .sort({ validFromYear: 1 })
+      .select("code name validFromYear validToYear active")
+      .lean();
+
+    console.log("\nBoundary Sets");
+    console.log("-------------");
+
+    if (boundarySets.length === 0) {
+      console.log("No boundary sets found.");
+    } else {
+      for (const boundarySet of boundarySets) {
+        const validToYear = boundarySet.validToYear || "present";
+
+        console.log(
+          `${boundarySet.code}: ${boundarySet.validFromYear}-${validToYear} | ${boundarySet.active ? "active" : "inactive"}`,
+        );
+      }
+    }
 
     const latestBatch = await ImportDataBatch.findOne()
       .sort({ updatedAt: -1 })
