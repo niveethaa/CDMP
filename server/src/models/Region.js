@@ -14,6 +14,32 @@ const PopulationSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const PointSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ["Point"],
+      required: true,
+    },
+    coordinates: {
+      type: [Number],
+      required: true,
+      validate: {
+        validator(value) {
+          return (
+            Array.isArray(value) &&
+            value.length === 2 &&
+            Number.isFinite(value[0]) &&
+            Number.isFinite(value[1])
+          );
+        },
+        message: "Coordinates must be [longitude, latitude].",
+      },
+    },
+  },
+  { _id: false },
+);
+
 const RegionSchema = new mongoose.Schema(
   {
     level: {
@@ -47,21 +73,15 @@ const RegionSchema = new mongoose.Schema(
     boundarySet: {
       type: String,
       trim: true,
+      index: true,
     },
     geometryRef: {
       type: String,
       trim: true,
     },
     centroid: {
-      type: {
-        type: String,
-        enum: ["Point"],
-        default: "Point",
-      },
-      coordinates: {
-        type: [Number],
-        default: undefined,
-      },
+      type: PointSchema,
+      default: undefined,
     },
     populationHistory: {
       type: [PopulationSchema],
@@ -82,6 +102,7 @@ RegionSchema.index(
   },
   { unique: true },
 );
+
 RegionSchema.index({ level: 1, name: 1 });
 RegionSchema.index({ centroid: "2dsphere" });
 

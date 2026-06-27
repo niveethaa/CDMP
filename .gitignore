@@ -30,3 +30,7 @@ cypress/videos/
 data/
 server/data/
 *.zip
+
+# Local PCRF normlaization files
+pcrf_normalization/pcfrf*
+pcrf_normalization/postal*

@@ -20,6 +20,7 @@
     "check:data": "node src/scripts/checkImportedData.js",
     "seed:regions": "node src/scripts/seedRegions.js",
     "build:region-stats": "node src/scripts/buildRegionStats.js",
-    "seed:boundary-sets": "node src/scripts/seedBoundarySets.js"
+    "seed:boundary-sets": "node src/scripts/seedBoundarySets.js",
+    "import:postal-riding-mappings": "node src/scripts/importPostalRidingMappings.js"
   }
 }
