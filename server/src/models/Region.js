@@ -74,7 +74,14 @@ const RegionSchema = new mongoose.Schema(
   },
 );
 
-RegionSchema.index({ level: 1, code: 1 }, { unique: true });
+RegionSchema.index(
+  {
+    level: 1,
+    code: 1,
+    boundarySet: 1,
+  },
+  { unique: true },
+);
 RegionSchema.index({ level: 1, name: 1 });
 RegionSchema.index({ centroid: "2dsphere" });
 
