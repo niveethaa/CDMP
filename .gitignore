@@ -33,4 +33,4 @@ server/data/
 
 # Local PCRF normlaization files
 pcrf_normalization/pcfrf*
-pcrf_normalization/postal*
+pcrf_normalization/postal_riding*

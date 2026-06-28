@@ -22,6 +22,7 @@
     "build:region-stats": "node src/scripts/buildRegionStats.js",
     "seed:boundary-sets": "node src/scripts/seedBoundarySets.js",
     "import:postal-riding-mappings": "node src/scripts/importPostalRidingMappings.js",
-    "match:donations-to-ridings": "node src/scripts/matchDonationsToRidings.js"
+    "match:donations-to-ridings": "node src/scripts/matchDonationsToRidings.js",
+    "build:timeline-region-stats": "node src/scripts/buildTimelineRegionStats.js"
   }
 }
