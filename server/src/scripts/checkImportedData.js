@@ -12,6 +12,9 @@ const PoliticalParty = require("../models/PoliticalParty");
 const Region = require("../models/Region");
 const RegionStat = require("../models/RegionStat");
 const BoundarySet = require("../models/BoundarySet");
+const PostalRidingMapping = require("../models/PostalRidingMapping");
+const DonationRidingAssignment = require("../models/DonationRidingAssignment");
+const ReferenceDataBatch = require("../models/ReferenceDataBatch");
 
 function money(value) {
   return "$" + Number(value || 0).toFixed(2);
@@ -26,12 +29,29 @@ async function checkImportedData() {
   try {
     await connectDB();
 
-    const politicalPartyCount = await PoliticalParty.countDocuments();
-    const donationCount = await Donation.countDocuments();
-    const importBatchCount = await ImportDataBatch.countDocuments();
-    const regionCount = await Region.countDocuments();
-    const regionStatCount = await RegionStat.countDocuments();
-    const boundarySetCount = await BoundarySet.countDocuments();
+    const [
+      politicalPartyCount,
+      donationCount,
+      importBatchCount,
+      regionCount,
+      ridingRegionCount,
+      regionStatCount,
+      boundarySetCount,
+      postalRidingMappingCount,
+      donationRidingAssignmentCount,
+      referenceDataBatchCount,
+    ] = await Promise.all([
+      PoliticalParty.countDocuments(),
+      Donation.countDocuments(),
+      ImportDataBatch.countDocuments(),
+      Region.countDocuments(),
+      Region.countDocuments({ level: "riding" }),
+      RegionStat.countDocuments(),
+      BoundarySet.countDocuments(),
+      PostalRidingMapping.countDocuments(),
+      DonationRidingAssignment.countDocuments(),
+      ReferenceDataBatch.countDocuments(),
+    ]);
 
     console.log("\nCDMP MongoDB Data Check");
     console.log("=======================");
@@ -39,8 +59,12 @@ async function checkImportedData() {
     console.log("Donation records:", donationCount);
     console.log("Import batches:", importBatchCount);
     console.log("Regions:", regionCount);
+    console.log("Riding regions:", ridingRegionCount);
     console.log("Region stats:", regionStatCount);
     console.log("Boundary sets:", boundarySetCount);
+    console.log("Postal-riding mappings:", postalRidingMappingCount);
+    console.log("Donation riding assignments:", donationRidingAssignmentCount);
+    console.log("Reference data batches:", referenceDataBatchCount);
 
     const boundarySets = await BoundarySet.find()
       .sort({ validFromYear: 1 })
@@ -57,8 +81,126 @@ async function checkImportedData() {
         const validToYear = boundarySet.validToYear || "present";
 
         console.log(
-          `${boundarySet.code}: ${boundarySet.validFromYear}-${validToYear} | ${boundarySet.active ? "active" : "inactive"}`,
+          `${boundarySet.code}: ${boundarySet.validFromYear}-${validToYear} | ${
+            boundarySet.active ? "active" : "inactive"
+          }`,
         );
+      }
+    }
+
+    const ridingRegionSummary = await Region.aggregate([
+      {
+        $match: {
+          level: "riding",
+        },
+      },
+      {
+        $group: {
+          _id: "$boundarySet",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: {
+          _id: 1,
+        },
+      },
+    ]);
+
+    console.log("\nRiding Regions by Boundary Set");
+    console.log("------------------------------");
+
+    if (ridingRegionSummary.length === 0) {
+      console.log("No riding regions found.");
+    } else {
+      for (const item of ridingRegionSummary) {
+        console.log(`${item._id || "unknown"}: ${item.count}`);
+      }
+    }
+
+    const mappingStatusSummary = await PostalRidingMapping.aggregate([
+      {
+        $group: {
+          _id: {
+            boundarySet: "$boundarySet",
+            matchStatus: "$matchStatus",
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: {
+          "_id.boundarySet": 1,
+          "_id.matchStatus": 1,
+        },
+      },
+    ]).allowDiskUse(true);
+
+    console.log("\nPostal-Riding Mapping Status");
+    console.log("----------------------------");
+
+    if (mappingStatusSummary.length === 0) {
+      console.log("No postal-riding mappings found.");
+    } else {
+      for (const item of mappingStatusSummary) {
+        const boundarySet = item._id?.boundarySet || "unknown";
+        const matchStatus = item._id?.matchStatus || "unknown";
+
+        console.log(`${boundarySet} | ${matchStatus}: ${item.count}`);
+      }
+    }
+
+    const ridingAssignmentSummary = await DonationRidingAssignment.aggregate([
+      {
+        $group: {
+          _id: "$matchStatus",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: {
+          count: -1,
+        },
+      },
+    ]);
+
+    console.log("\nDonation Riding Assignment Summary");
+    console.log("----------------------------------");
+
+    if (ridingAssignmentSummary.length === 0) {
+      console.log("No riding assignments found.");
+    } else {
+      for (const item of ridingAssignmentSummary) {
+        console.log(`${item._id || "unknown"}: ${item.count}`);
+      }
+    }
+
+    const referenceBatchSummary = await ReferenceDataBatch.find()
+      .sort({ updatedAt: -1 })
+      .limit(10)
+      .select(
+        "fileName referenceType boundarySet status rowCount importedCount skippedCount errorMessage",
+      )
+      .lean();
+
+    console.log("\nLatest Reference Data Batches");
+    console.log("-----------------------------");
+
+    if (referenceBatchSummary.length === 0) {
+      console.log("No reference data batches found.");
+    } else {
+      for (const batch of referenceBatchSummary) {
+        console.log(
+          `${batch.fileName} | ${batch.referenceType} | ${
+            batch.boundarySet || "no boundary set"
+          } | ${batch.status} | rows: ${batch.rowCount} | imported: ${
+            batch.importedCount
+          } | skipped: ${batch.skippedCount}`,
+        );
+
+        if (batch.errorMessage) {
+          console.log(`  Error: ${batch.errorMessage}`);
+        }
       }
     }
 
@@ -66,11 +208,11 @@ async function checkImportedData() {
       .sort({ updatedAt: -1 })
       .lean();
 
-    console.log("\nLatest Import Batch");
-    console.log("-------------------");
+    console.log("\nLatest Donation Import Batch");
+    console.log("----------------------------");
 
     if (!latestBatch) {
-      console.log("No import batch found.");
+      console.log("No donation import batch found.");
     } else {
       console.log("File:", latestBatch.fileName);
       console.log("Year:", latestBatch.year);
@@ -89,7 +231,7 @@ async function checkImportedData() {
       .sort({ createdAt: -1 })
       .limit(5)
       .select(
-        "source.fileName source.year donor.donorDisplayName donor.city donor.province party.code contribution.dateReceived contribution.amountTotal",
+        "source.fileName source.year donor.donorDisplayName donor.city donor.province party.code contribution.dateReceived contribution.amountTotal geography.ridingCode geography.ridingName geography.geoCodeStatus geography.boundarySet",
       )
       .lean();
 
@@ -106,6 +248,7 @@ async function checkImportedData() {
         const party = donation.party || {};
         const contribution = donation.contribution || {};
         const source = donation.source || {};
+        const geography = donation.geography || {};
 
         const donorName = donor.donorDisplayName || "Unknown donor";
         const partyCode = party.code || "UNKNOWN";
@@ -114,9 +257,11 @@ async function checkImportedData() {
         const city = donor.city || "Unknown city";
         const province = donor.province || "Unknown province";
         const fileName = source.fileName || "Unknown file";
+        const ridingName = geography.ridingName || "No riding";
+        const geoCodeStatus = geography.geoCodeStatus || "not_attempted";
 
         console.log(
-          `${i + 1}. ${donorName} | ${partyCode} | ${amount} | ${date} | ${city}, ${province} | ${fileName}`,
+          `${i + 1}. ${donorName} | ${partyCode} | ${amount} | ${date} | ${city}, ${province} | ${ridingName} | ${geoCodeStatus} | ${fileName}`,
         );
       }
     }
@@ -137,7 +282,7 @@ async function checkImportedData() {
       {
         $limit: 10,
       },
-    ]);
+    ]).allowDiskUse(true);
 
     console.log("\nDonation Summary by Party");
     console.log("-------------------------");
