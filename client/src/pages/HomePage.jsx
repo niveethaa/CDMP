@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import DonationMap from "../components/Map/DonationMap";
 import RegionSummaryPanel from "../components/Summary/RegionSummaryPanel";
 import DonationFilters from "../components/Filters/DonationFilters";
@@ -26,6 +27,7 @@ const PROVINCE_NAMES = {
 };
 
 export default function HomePage() {
+  const navigate = useNavigate();
   const [nationalStats, setNationalStats] = useState(null);
   const [provinceStats, setProvinceStats] = useState([]);
   const [selectedStats, setSelectedStats] = useState(null);
@@ -214,7 +216,7 @@ export default function HomePage() {
               />
             )}
           </div>
-          <button className="nav-btn nav-btn--primary">Research Login</button>
+          <button className="nav-btn nav-btn--primary" onClick={() => navigate("/login")}>Research Login</button>
         </div>
       </header>
 
