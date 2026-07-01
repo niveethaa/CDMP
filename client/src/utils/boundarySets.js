@@ -8,9 +8,9 @@ export const BOUNDARY_SETS = [
     shortLabel: "1996 Map",
     validFromYear: 1997,
     validToYear: 2003,
-    hasGeoJson: true,
+    hasGeoJson: false,
     hasDonationData: false,
-    note: "Uses the 1996 Representation Order riding boundaries.",
+    note: "The 1996 riding boundaries and mapped donation data are not bundled yet.",
   },
   {
     code: "federal_ridings_2003",
@@ -36,10 +36,10 @@ export const BOUNDARY_SETS = [
     shortLabel: "2023 Map",
     validFromYear: 2025,
     validToYear: 2034,
-    hasGeoJson: true,
+    hasGeoJson: false,
     hasDonationData: false,
-    note: "The 2023 Representation Orders are available for the map, but CDMP currently has no donation data for this time frame.",
-    noDataMessage: "Currently there is no donation data available for this time frame.",
+    note: "The 2023 riding boundaries and mapped donation data are not bundled yet.",
+    noDataMessage: "This riding map is not available yet because boundary and donation data are missing.",
   },
 ];
 
@@ -47,6 +47,20 @@ export const DEFAULT_BOUNDARY_SET_CODE = "federal_ridings_2013";
 
 export function getBoundarySetByCode(code) {
   return BOUNDARY_SETS.find((set) => set.code === code) || null;
+}
+
+export function isBoundarySetAvailableForRiding(boundarySet) {
+  return Boolean(boundarySet?.hasGeoJson && boundarySet?.hasDonationData);
+}
+
+export function getDefaultRidingBoundarySet() {
+  const defaultBoundarySet = getBoundarySetByCode(DEFAULT_BOUNDARY_SET_CODE);
+
+  if (isBoundarySetAvailableForRiding(defaultBoundarySet)) {
+    return defaultBoundarySet;
+  }
+
+  return BOUNDARY_SETS.find(isBoundarySetAvailableForRiding) || defaultBoundarySet;
 }
 
 export function getBoundarySetForYear(year) {
@@ -62,18 +76,30 @@ export function getBoundarySetForYear(year) {
   );
 }
 
-export function getBoundarySetForFilters(filters) {
+export function getBoundarySetForFilters(filters, options = {}) {
+  const requireRidingData = Boolean(options.requireRidingData);
+
   if (filters?.boundarySet) {
     const explicit = getBoundarySetByCode(filters.boundarySet);
-    if (explicit) return explicit;
+    if (explicit && (!requireRidingData || isBoundarySetAvailableForRiding(explicit))) {
+      return explicit;
+    }
   }
 
   const endingYear = Number(filters?.endingYear || DATA_MAX_YEAR);
-  return getBoundarySetForYear(endingYear) || getBoundarySetByCode(DEFAULT_BOUNDARY_SET_CODE);
+  const inferred = getBoundarySetForYear(endingYear);
+
+  if (inferred && (!requireRidingData || isBoundarySetAvailableForRiding(inferred))) {
+    return inferred;
+  }
+
+  return requireRidingData
+    ? getDefaultRidingBoundarySet()
+    : getBoundarySetByCode(DEFAULT_BOUNDARY_SET_CODE);
 }
 
 export function getDefaultFilters() {
-  const defaultBoundarySet = getBoundarySetByCode(DEFAULT_BOUNDARY_SET_CODE);
+  const defaultBoundarySet = getDefaultRidingBoundarySet();
 
   return {
     partyCode: "ALL",
@@ -85,7 +111,10 @@ export function getDefaultFilters() {
 }
 
 export function getFiltersForBoundarySet(boundarySetCode, currentFilters = {}) {
-  const boundarySet = getBoundarySetByCode(boundarySetCode) || getBoundarySetByCode(DEFAULT_BOUNDARY_SET_CODE);
+  const selectedBoundarySet = getBoundarySetByCode(boundarySetCode);
+  const boundarySet = isBoundarySetAvailableForRiding(selectedBoundarySet)
+    ? selectedBoundarySet
+    : getDefaultRidingBoundarySet();
   const endingYear = boundarySet.hasDonationData === false
     ? boundarySet.validFromYear
     : Math.min(boundarySet.validToYear, DATA_MAX_YEAR);

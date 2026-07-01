@@ -5,6 +5,7 @@ import {
   getBoundarySetByCode,
   getDefaultFilters,
   getFiltersForBoundarySet,
+  isBoundarySetAvailableForRiding,
 } from "../../utils/boundarySets";
 
 const PARTIES = [
@@ -30,9 +31,11 @@ function isRidingMapMode(viewLevel) {
 }
 
 export default function DonationFilters({ filters, viewLevel, onApply, onClose }) {
-  const initial = { ...getDefaultFilters(), ...filters };
-  const [draftFilters, setDraftFilters] = useState(initial);
   const useBoundaryBuckets = isRidingMapMode(viewLevel);
+  const initial = useBoundaryBuckets
+    ? getFiltersForBoundarySet(filters.boundarySet, { ...getDefaultFilters(), ...filters })
+    : { ...getDefaultFilters(), ...filters };
+  const [draftFilters, setDraftFilters] = useState(initial);
 
   const years = [];
   for (let y = MIN_YEAR; y <= MAX_YEAR; y += 1) years.push(y);
@@ -63,7 +66,7 @@ export default function DonationFilters({ filters, viewLevel, onApply, onClose }
 
   function handleBoundarySet(value) {
     const selected = getBoundarySetByCode(value);
-    if (!selected?.hasGeoJson) return;
+    if (!isBoundarySetAvailableForRiding(selected)) return;
     setDraftFilters((current) => getFiltersForBoundarySet(value, current));
   }
 
@@ -71,8 +74,11 @@ export default function DonationFilters({ filters, viewLevel, onApply, onClose }
     const finalFilters = { ...draftFilters };
     const boundarySet = getBoundarySetByCode(finalFilters.boundarySet);
 
-    if (useBoundaryBuckets && boundarySet) {
-      Object.assign(finalFilters, getFiltersForBoundarySet(boundarySet.code, finalFilters));
+    if (useBoundaryBuckets) {
+      const boundarySetCode = isBoundarySetAvailableForRiding(boundarySet)
+        ? boundarySet.code
+        : undefined;
+      Object.assign(finalFilters, getFiltersForBoundarySet(boundarySetCode, finalFilters));
     }
 
     onApply(finalFilters);
@@ -142,8 +148,13 @@ export default function DonationFilters({ filters, viewLevel, onApply, onClose }
           <div className="boundary-options" role="radiogroup" aria-label="Riding boundary map">
             {BOUNDARY_SETS.map((set) => {
               const isActive = draftFilters.boundarySet === set.code;
-              const isDisabled = !set.hasGeoJson;
-              const noDonationData = set.hasDonationData === false;
+              const isAvailable = isBoundarySetAvailableForRiding(set);
+              const isDisabled = !isAvailable;
+              const statusLabel = !set.hasGeoJson
+                ? "Riding boundaries unavailable"
+                : set.hasDonationData === false
+                  ? "Donation data unavailable"
+                  : "Available";
 
               return (
                 <button
@@ -161,7 +172,7 @@ export default function DonationFilters({ filters, viewLevel, onApply, onClose }
                 >
                   <span className="boundary-option-main">{set.label}</span>
                   <span className="boundary-option-sub">
-                    {isDisabled ? "Unavailable" : noDonationData ? "No Data Available" : "Available"}
+                    {statusLabel}
                   </span>
                 </button>
               );

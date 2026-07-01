@@ -259,7 +259,7 @@ export default function HomePage() {
   const previousBoundarySet = useRef(filters.boundarySet);
 
   const activeBoundarySet = useMemo(
-    () => getBoundarySetForFilters(filters),
+    () => getBoundarySetForFilters(filters, { requireRidingData: true }),
     [filters],
   );
 
