@@ -7,9 +7,15 @@ describe("seedBoundarySets script helpers", () => {
   it("defines the expected initial boundary sets", () => {
     const codes = boundarySets.map((boundarySet) => boundarySet.code);
 
+    expect(codes).toContain("federal_ridings_1996");
     expect(codes).toContain("federal_ridings_2003");
     expect(codes).toContain("federal_ridings_2013");
     expect(codes).toContain("federal_ridings_2023");
+  });
+
+  it("resolves 1997-2003 years to the 1996 boundary set", () => {
+    expect(getBoundarySetForYear(1997).code).toBe("federal_ridings_1996");
+    expect(getBoundarySetForYear(2003).code).toBe("federal_ridings_1996");
   });
 
   it("resolves 2004-2014 years to the 2003 boundary set", () => {
@@ -29,6 +35,6 @@ describe("seedBoundarySets script helpers", () => {
 
   it("returns null for invalid or unsupported years", () => {
     expect(getBoundarySetForYear("not-a-year")).toBeNull();
-    expect(getBoundarySetForYear(2003)).toBeNull();
+    expect(getBoundarySetForYear(1993)).toBeNull();
   });
 });

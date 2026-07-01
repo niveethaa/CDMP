@@ -8,13 +8,24 @@ const BoundarySet = require("../models/BoundarySet");
 
 const boundarySets = [
   {
+    code: "federal_ridings_1996",
+    name: "Federal Ridings - 1996 Representation Order",
+    level: "riding",
+    validFromYear: 1997,
+    validToYear: 2003,
+    source: "Statistics Canada 1996 Federal Electoral Districts Digital Cartographic File and PCFRF reference data",
+    notes:
+      "Boundary set for donation years 1997-2003 using the 1996 Representation Order riding map.",
+    active: true,
+  },
+  {
     code: "federal_ridings_2003",
     name: "Federal Ridings - 2003 Representation Order",
     level: "riding",
     validFromYear: 2004,
     validToYear: 2014,
     source: "Federal electoral district boundary/reference data",
-    notes: "Initial CDMP timeline boundary set for donation years 2004-2014.",
+    notes: "CDMP timeline boundary set for donation years 2004-2014.",
     active: true,
   },
   {
@@ -24,7 +35,7 @@ const boundarySets = [
     validFromYear: 2015,
     validToYear: 2024,
     source: "Federal electoral district boundary/reference data",
-    notes: "Initial CDMP timeline boundary set for donation years 2015-2024.",
+    notes: "CDMP timeline boundary set for donation years 2015-2024.",
     active: true,
   },
   {
@@ -35,7 +46,7 @@ const boundarySets = [
     validToYear: null,
     source: "Federal electoral district boundary/reference data",
     notes:
-      "Initial CDMP timeline boundary set for donation years 2025 onward. Year range can be adjusted if the product chooses a different boundary-year policy.",
+      "Boundary set for donation years 2025 onward. Geometry is bundled, but CDMP currently has no donation data beyond 2024.",
     active: true,
   },
 ];
