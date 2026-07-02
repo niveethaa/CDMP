@@ -57,8 +57,7 @@
 
 ## Meeting Minutes
 **Demo Meeting Notes**
-- Demo Meeting 1
-Link: (To be Added)
+- [Demo Meeting 1](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/36f78ac6754a0a04fe5f392c9493f94a71361405/meeting_minutes/demo_meeting_minutes/Demo_Meeting_Notes_Template.pdf)
 
 
 **Standup Meeting Notes**
@@ -93,6 +92,7 @@ Useful backend commands after importing the donation and postal-riding data:
 
 ```bash
 cd server
+npm run import:opennorth-ridings 
 npm run seed:boundary-sets
 npm run seed:riding-regions
 npm run match:donations-to-ridings -- --all
