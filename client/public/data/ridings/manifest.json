@@ -1,0 +1,191 @@
+{
+  "version": 1,
+  "boundarySets": {
+    "federal_ridings_2003": {
+      "label": "2004–2014 · 2003 Riding Map",
+      "shortLabel": "2003 Map",
+      "validFromYear": 2004,
+      "validToYear": 2014,
+      "expectedCount": 308,
+      "featureCount": 308,
+      "geometryMode": "simple",
+      "source": "OpenNorth Represent API",
+      "sourceUrl": "https://represent.opennorth.ca/boundaries/federal-electoral-districts-2003-representation-order/simple_shape?limit=308",
+      "generatedAt": "2026-07-02T18:31:58.224Z",
+      "provinces": {
+        "NL": {
+          "name": "Newfoundland and Labrador",
+          "file": "NL.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/NL.json",
+          "featureCount": 7
+        },
+        "PE": {
+          "name": "Prince Edward Island",
+          "file": "PE.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/PE.json",
+          "featureCount": 4
+        },
+        "NS": {
+          "name": "Nova Scotia",
+          "file": "NS.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/NS.json",
+          "featureCount": 11
+        },
+        "NB": {
+          "name": "New Brunswick",
+          "file": "NB.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/NB.json",
+          "featureCount": 10
+        },
+        "QC": {
+          "name": "Quebec",
+          "file": "QC.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/QC.json",
+          "featureCount": 75
+        },
+        "ON": {
+          "name": "Ontario",
+          "file": "ON.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/ON.json",
+          "featureCount": 106
+        },
+        "MB": {
+          "name": "Manitoba",
+          "file": "MB.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/MB.json",
+          "featureCount": 14
+        },
+        "SK": {
+          "name": "Saskatchewan",
+          "file": "SK.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/SK.json",
+          "featureCount": 14
+        },
+        "AB": {
+          "name": "Alberta",
+          "file": "AB.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/AB.json",
+          "featureCount": 28
+        },
+        "BC": {
+          "name": "British Columbia",
+          "file": "BC.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/BC.json",
+          "featureCount": 36
+        },
+        "YT": {
+          "name": "Yukon",
+          "file": "YT.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/YT.json",
+          "featureCount": 1
+        },
+        "NT": {
+          "name": "Northwest Territories",
+          "file": "NT.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/NT.json",
+          "featureCount": 1
+        },
+        "NU": {
+          "name": "Nunavut",
+          "file": "NU.json",
+          "publicPath": "/data/ridings/federal_ridings_2003/NU.json",
+          "featureCount": 1
+        }
+      }
+    },
+    "federal_ridings_2013": {
+      "label": "2015–2024 · 2013 Riding Map",
+      "shortLabel": "2013 Map",
+      "validFromYear": 2015,
+      "validToYear": 2024,
+      "expectedCount": 338,
+      "featureCount": 338,
+      "geometryMode": "simple",
+      "source": "OpenNorth Represent API",
+      "sourceUrl": "https://represent.opennorth.ca/boundaries/federal-electoral-districts-2013-representation-order/simple_shape?limit=338",
+      "generatedAt": "2026-07-02T18:32:01.027Z",
+      "provinces": {
+        "NL": {
+          "name": "Newfoundland and Labrador",
+          "file": "NL.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/NL.json",
+          "featureCount": 7
+        },
+        "PE": {
+          "name": "Prince Edward Island",
+          "file": "PE.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/PE.json",
+          "featureCount": 4
+        },
+        "NS": {
+          "name": "Nova Scotia",
+          "file": "NS.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/NS.json",
+          "featureCount": 11
+        },
+        "NB": {
+          "name": "New Brunswick",
+          "file": "NB.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/NB.json",
+          "featureCount": 10
+        },
+        "QC": {
+          "name": "Quebec",
+          "file": "QC.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/QC.json",
+          "featureCount": 78
+        },
+        "ON": {
+          "name": "Ontario",
+          "file": "ON.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/ON.json",
+          "featureCount": 121
+        },
+        "MB": {
+          "name": "Manitoba",
+          "file": "MB.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/MB.json",
+          "featureCount": 14
+        },
+        "SK": {
+          "name": "Saskatchewan",
+          "file": "SK.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/SK.json",
+          "featureCount": 14
+        },
+        "AB": {
+          "name": "Alberta",
+          "file": "AB.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/AB.json",
+          "featureCount": 34
+        },
+        "BC": {
+          "name": "British Columbia",
+          "file": "BC.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/BC.json",
+          "featureCount": 42
+        },
+        "YT": {
+          "name": "Yukon",
+          "file": "YT.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/YT.json",
+          "featureCount": 1
+        },
+        "NT": {
+          "name": "Northwest Territories",
+          "file": "NT.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/NT.json",
+          "featureCount": 1
+        },
+        "NU": {
+          "name": "Nunavut",
+          "file": "NU.json",
+          "publicPath": "/data/ridings/federal_ridings_2013/NU.json",
+          "featureCount": 1
+        }
+      }
+    }
+  },
+  "generatedAt": "2026-07-02T18:32:01.027Z",
+  "source": "OpenNorth Represent API"
+}
