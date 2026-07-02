@@ -69,3 +69,42 @@
 
 
 
+## Current Data Coverage and Boundary Buckets
+
+The project data coverage is 1993–2024. Riding-level map views are organized by federal representation order because riding boundaries change over time.
+
+| Donation years | Boundary set | Current frontend geometry |
+| --- | --- | --- |
+| 1997–2003 | `federal_ridings_1996` | Included under `client/public/data/ridings/federal_ridings_1996/` |
+| 2004–2014 | `federal_ridings_2003` | Included under `client/public/data/ridings/federal_ridings_2003/` |
+| 2015–2024 | `federal_ridings_2013` | Included under `client/public/data/ridings/federal_ridings_2013/` |
+| 2025+ | `federal_ridings_2023` | Included under `client/public/data/ridings/federal_ridings_2023/`; no donation data yet |
+
+The current React app uses the 2013 riding map by default because the default data range ends in 2024. In riding view, users can choose boundary-vintage buckets. The 2025 onward bucket loads the 2023 riding map, but shows a no-data message because CDMP does not currently include post-2024 donation data.
+
+## Riding View Implementation
+
+Clicking a province now drills into a riding-level map for that province. The frontend loads province-specific riding GeoJSON files from `client/public/data/ridings/`, displays the selected boundary set in the active filter badges, and lets the user click a riding to open the summary panel.
+
+The summary panel supports riding-level summaries through the existing `RegionStat` model. If riding stats have not been built yet, the frontend still opens the selected riding and displays a no-data message explaining that riding aggregation needs to be run. For the 2025 onward bucket, the app displays a no-data message because there is currently no donation data for that time frame.
+
+Useful backend commands after importing the donation and postal-riding data:
+
+```bash
+cd server
+npm run import:opennorth-ridings 
+npm run seed:boundary-sets
+npm run seed:riding-regions
+npm run match:donations-to-ridings -- --all
+npm run build:timeline-region-stats -- --level riding --beginning-year 2004 --ending-year 2024
+```
+
+Useful validation commands:
+
+```bash
+cd client
+npm run build
+
+cd ../server
+npm test -- --watch=false
+```
