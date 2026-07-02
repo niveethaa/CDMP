@@ -41,13 +41,23 @@ export default function PrivacyAgreement() {
         </p>
         <label>
           <input
-            type="checkbox"
-            checked={agree}
-            onChange={() => setAgree(!agree)}
+            type="radio"
+            name="privacy"
+            checked={agree=== true}
+            onChange={() => setAgree(true)}
           />
           {" "}I agree to the privacy policy.
         </label>
         <br />
+        <label>
+          <input
+            type="radio"
+            name="privacy"
+            checked={agree === false}
+            onChange={() => setAgree(false)}
+          />
+          {" "}I do not agree.
+        </label>
         <button onClick={handleAgree}>Continue</button>
       </div>
     </div>

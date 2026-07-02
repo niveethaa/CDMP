@@ -1091,6 +1091,17 @@ body {
   transition: background 0.15s, color 0.15s;
 }
 
+.dashboard .sidebar input {
+  width: 100%;
+  padding: 8px 10px;
+  background: #1a1f33;
+  border: 1px solid #2a3150;
+  color: #f1f5f9;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+}
+
 .dashboard .sidebar button:hover { background: #2e3550; color: #f1f5f9; }
 
 .dashboard .table-container {
