@@ -28,5 +28,9 @@ cypress/videos/
 
 # Local raw data files
 data/
+!client/public/data/
+!client/public/data/ridings/
+!client/public/data/ridings/**
 server/data/
 *.zip
+pcrf_normalization/*.csv
