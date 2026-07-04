@@ -11,6 +11,12 @@
 Public Users Main Screen: 
 ![CDMP Main Screen](./documentation/CDMP_MainScreen.png)
 
+Filter View of Main Screen: 
+![Filter View Main Screen](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/57afa95192fd8cc9d82315deae1d5ee7244eb7c9/documentation/FilterPageView.png)
+
+Riding Level View of Main Screen: 
+![Riding Level View](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/57afa95192fd8cc9d82315deae1d5ee7244eb7c9/documentation/RidingLevelViews.png)
+
 Authenticated Research Users Main Screen: 
 ![Authenticated User Main Screen](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/5609de15c11fc41e4a3f942bbef66ee63b3392d9/documentation/AuthenticatedUsers_MainScreen.png)
 
