@@ -8,8 +8,11 @@
 
 **Product Screenshot**:
 
+Public Users Main Screen: 
 ![CDMP Main Screen](./documentation/CDMP_MainScreen.png)
 
+Authenticated Research Users Main Screen: 
+![Authenticated User Main Screen](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/5609de15c11fc41e4a3f942bbef66ee63b3392d9/documentation/AuthenticatedUsers_MainScreen.png)
 
 ## Team Information
 
