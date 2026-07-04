@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { jest } from "@jest/globals";
 import {
   fetchNationalStats,
   fetchAllProvinceStats,
@@ -6,9 +6,8 @@ import {
   fetchRegionStats,
 } from "./regions";
 
-// Replace global.fetch with a fake that returns a controlled response.
 function mockFetchOnce(body, ok = true, status = 200) {
-  global.fetch = vi.fn().mockResolvedValue({
+  global.fetch = jest.fn().mockResolvedValue({
     ok,
     status,
     json: () => Promise.resolve(body),
@@ -22,7 +21,7 @@ const fakeStat = {
 
 describe("regions API client", () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   describe("fetchNationalStats", () => {
