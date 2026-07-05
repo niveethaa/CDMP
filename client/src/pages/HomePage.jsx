@@ -1,12 +1,20 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import DonationMap from "../components/Map/DonationMap";
 import RegionSummaryPanel from "../components/Summary/RegionSummaryPanel";
 import DonationFilters from "../components/Filters/DonationFilters";
+import ErrorBoundary from "../components/ErrorBoundary";
 import {
   fetchNationalStats,
   fetchAllProvinceStats,
   fetchRegionStats,
+  fetchRidingStatsByProvince,
 } from "../api/regions";
+import {
+  DATA_MAX_YEAR,
+  getBoundarySetForFilters,
+  getDefaultFilters,
+} from "../utils/boundarySets";
 import "../App.css";
 
 const PROVINCE_NAMES = {
@@ -25,127 +33,516 @@ const PROVINCE_NAMES = {
   YT: "Yukon",
 };
 
+const PARTY_LABELS = {
+  ALL: "All Parties",
+  CPC: "Conservative",
+  LPC: "Liberal",
+  NDP: "NDP",
+  BQ: "Bloc Québécois",
+  GPC: "Green",
+  PPC: "People's Party",
+};
+
+function getBoundaryEndingYear(boundarySet) {
+  if (!boundarySet) return DATA_MAX_YEAR;
+  if (boundarySet.hasDonationData === false) return boundarySet.validFromYear;
+  return Math.min(boundarySet.validToYear, DATA_MAX_YEAR);
+}
+
+function buildActiveFilterChips({ filters, viewLevel, selectedProvinceCode, activeBoundarySet }) {
+  const partyCode = filters.partyCode || "ALL";
+  const metricLabel = filters.metricMode === "per_capita" ? "Per Capita" : "Total $";
+  const provinceName = selectedProvinceCode
+    ? PROVINCE_NAMES[selectedProvinceCode] || selectedProvinceCode
+    : null;
+  const locationLabel = viewLevel === "national" ? "Canada" : `${provinceName} Ridings`;
+  const yearLabel = viewLevel === "national"
+    ? `${filters.beginningYear}–${filters.endingYear}`
+    : activeBoundarySet
+      ? `${activeBoundarySet.validFromYear}–${getBoundaryEndingYear(activeBoundarySet)}`
+      : `${filters.beginningYear}–${filters.endingYear}`;
+
+  const chips = [
+    locationLabel,
+    PARTY_LABELS[partyCode] || partyCode,
+    yearLabel,
+    metricLabel,
+  ];
+
+  if (viewLevel !== "national" && activeBoundarySet?.shortLabel) {
+    chips.push(activeBoundarySet.shortLabel);
+  }
+
+  return chips;
+}
+
+function createEmptyTotals(population = 0) {
+  return {
+    totalDonations: 0,
+    donationCount: 0,
+    donorCount: 0,
+    averageDonation: 0,
+    perCapitaAmount: 0,
+    population: Number(population || 0),
+  };
+}
+
+function buildEmptyRegionStats(region, boundarySetLabel, filters, message) {
+  return {
+    region,
+    filters: {
+      beginningYear: filters.beginningYear,
+      endingYear: filters.endingYear,
+      partyCode: filters.partyCode || "ALL",
+      metricMode: filters.metricMode || "total",
+    },
+    totals: createEmptyTotals(region?.population || 0),
+    partyStats: [],
+    donationsTrend: [],
+    privacy: {
+      isSuppressed: false,
+      suppressionThreshold: 5,
+      suppressionReason: "",
+    },
+    _boundarySetLabel: boundarySetLabel,
+    _noDataMessage: message,
+  };
+}
+
+function buildRidingRegionFromProperties(properties = {}, filters = {}) {
+  const code = String(properties.code || properties.fednum || "").padStart(5, "0");
+
+  return {
+    level: "riding",
+    code,
+    name: properties.name || "Unnamed Riding",
+    provinceCode: properties.provinceCode,
+    provinceName: properties.provinceName,
+    boundarySet: properties.boundarySet || filters.boundarySet,
+    population: Number(properties.population || properties.decpopcnt || 0),
+  };
+}
+
+function buildFallbackMessage(activeBoundarySet) {
+  if (activeBoundarySet?.hasDonationData === false) {
+    return activeBoundarySet.noDataMessage || "Currently there is no donation data available for this time frame.";
+  }
+
+  return "No donation summary has been built for this selection yet. Run the riding matching and timeline aggregation scripts to populate this panel.";
+}
+
+function buildFilterQuery(filters, activeBoundarySet, includeBoundarySet = false) {
+  const query = {
+    partyCode: filters.partyCode || "ALL",
+    beginningYear: filters.beginningYear,
+    endingYear: filters.endingYear,
+    metricMode: filters.metricMode || "total",
+  };
+
+  if (!includeBoundarySet && activeBoundarySet?.hasDonationData === false) {
+    query.beginningYear = 1993;
+    query.endingYear = DATA_MAX_YEAR;
+  }
+
+  if (includeBoundarySet && activeBoundarySet?.code) {
+    query.boundarySet = activeBoundarySet.code;
+    query.beginningYear = activeBoundarySet.validFromYear;
+    query.endingYear = getBoundaryEndingYear(activeBoundarySet);
+  }
+
+  return query;
+}
+
+function makeProvinceSearchResults(query) {
+  const q = query.toLowerCase();
+
+  return Object.entries(PROVINCE_NAMES)
+    .filter(
+      ([code, name]) =>
+        name.toLowerCase().includes(q) || code.toLowerCase().includes(q),
+    )
+    .map(([code, name]) => ({
+      type: "province",
+      code,
+      name,
+      label: `${code} — ${name}`,
+    }))
+    .slice(0, 12);
+}
+
+function makeRidingSearchResults(query, ridingStats) {
+  const q = query.toLowerCase();
+
+  return (ridingStats || [])
+    .map((stat) => ({
+      type: "riding",
+      code: stat.region?.code,
+      name: stat.region?.name,
+      region: stat.region,
+      label: `${stat.region?.code} — ${stat.region?.name}`,
+    }))
+    .filter(
+      (item) =>
+        item.code?.toLowerCase().includes(q) ||
+        item.name?.toLowerCase().includes(q),
+    )
+    .slice(0, 12);
+}
+
+async function loadRidingMetadataForProvince(provinceCode, activeBoundarySet, filters) {
+  if (!provinceCode || !activeBoundarySet?.code) return [];
+
+  const response = await fetch(
+    `/data/ridings/${activeBoundarySet.code}/${provinceCode}.json`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`Unable to load ${activeBoundarySet.code}/${provinceCode}.json`);
+  }
+
+  const featureCollection = await response.json();
+  const message = buildFallbackMessage(activeBoundarySet);
+
+  return (featureCollection.features || []).map((feature) => {
+    const region = buildRidingRegionFromProperties(feature.properties, filters);
+    return buildEmptyRegionStats(region, activeBoundarySet.label, filters, message);
+  });
+}
+
+function mergeRidingStatsWithMetadata(metadataStats, apiStats) {
+  const byCode = new Map();
+
+  for (const stat of metadataStats || []) {
+    if (stat.region?.code) byCode.set(stat.region.code, stat);
+  }
+
+  for (const stat of apiStats || []) {
+    if (stat.region?.code) byCode.set(stat.region.code, stat);
+  }
+
+  return [...byCode.values()].sort((a, b) =>
+    String(a.region?.name || "").localeCompare(String(b.region?.name || "")),
+  );
+}
+
+function buildProvinceFallbackStats(provinceCode, activeBoundarySet, filters) {
+  const name = PROVINCE_NAMES[provinceCode] || provinceCode;
+  return buildEmptyRegionStats(
+    {
+      level: "province",
+      code: provinceCode,
+      name,
+      provinceCode,
+      provinceName: name,
+      boundarySet: activeBoundarySet?.code,
+    },
+    activeBoundarySet?.label,
+    filters,
+    buildFallbackMessage(activeBoundarySet),
+  );
+}
+
 export default function HomePage() {
+  const navigate = useNavigate();
   const [nationalStats, setNationalStats] = useState(null);
   const [provinceStats, setProvinceStats] = useState([]);
+  const [ridingStats, setRidingStats] = useState([]);
   const [selectedStats, setSelectedStats] = useState(null);
-  const [selectedCode, setSelectedCode] = useState(null);
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState(null);
+  const [selectedRidingCode, setSelectedRidingCode] = useState(null);
+  const [selectedRidingInfo, setSelectedRidingInfo] = useState(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [panelLoading, setPanelLoading] = useState(false);
   const [mapError, setMapError] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-
-  const [filters, setFilters] = useState({
-    partyCode: "ALL",
-    beginningYear: 2004,
-    endingYear: 2024,
-  });
+  const [filters, setFilters] = useState(() => getDefaultFilters());
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const previousBoundarySet = useRef(filters.boundarySet);
+
+  const activeBoundarySet = useMemo(
+    () => getBoundarySetForFilters(filters, { requireRidingData: true }),
+    [filters],
+  );
+
+  const viewLevel = selectedRidingCode
+    ? "riding"
+    : selectedProvinceCode
+      ? "province"
+      : "national";
+
+  const overviewQuery = useMemo(
+    () => buildFilterQuery(filters, activeBoundarySet, false),
+    [activeBoundarySet, filters],
+  );
+
+  const ridingQuery = useMemo(
+    () => buildFilterQuery(filters, activeBoundarySet, true),
+    [activeBoundarySet, filters],
+  );
+
+  const selectedProvinceName = selectedProvinceCode
+    ? PROVINCE_NAMES[selectedProvinceCode] || selectedProvinceCode
+    : "";
+
+  const boundaryHasNoDonationData = activeBoundarySet?.hasDonationData === false;
+  const boundaryNoDataMessage = boundaryHasNoDonationData
+    ? buildFallbackMessage(activeBoundarySet)
+    : "";
 
   useEffect(() => {
-    async function load() {
+    let cancelled = false;
+
+    async function loadOverview() {
       try {
+        setMapError(false);
         const [national, provinces] = await Promise.all([
-          fetchNationalStats(),
-          fetchAllProvinceStats(),
+          fetchNationalStats(overviewQuery),
+          fetchAllProvinceStats(overviewQuery),
         ]);
+
+        if (cancelled) return;
+
         setNationalStats(national);
         setProvinceStats(provinces);
-        setSelectedStats(national);
-      } catch {
-        setMapError(true);
+
+        if (!selectedProvinceCode && !selectedRidingCode) {
+          setSelectedStats(national);
+        }
+      } catch (error) {
+        console.error("Failed to load national/province stats:", error);
+        if (!cancelled) setMapError(true);
       } finally {
-        setInitialLoading(false);
+        if (!cancelled) setInitialLoading(false);
       }
     }
-    load();
-  }, []);
 
-  const handleSelectProvince = useCallback(
-    async (code) => {
-      if (code === selectedCode) return;
-      setSelectedCode(code);
+    loadOverview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [overviewQuery, selectedProvinceCode, selectedRidingCode]);
+
+  useEffect(() => {
+    if (previousBoundarySet.current === filters.boundarySet) return;
+
+    previousBoundarySet.current = filters.boundarySet;
+    setSelectedRidingCode(null);
+    setSelectedRidingInfo(null);
+  }, [filters.boundarySet]);
+
+  useEffect(() => {
+    if (!selectedProvinceCode) return;
+
+    let cancelled = false;
+
+    async function loadProvinceView() {
       setPanelLoading(true);
       setSearchQuery("");
       setSearchResults([]);
+
       try {
-        const stats = await fetchRegionStats("province", code);
-        setSelectedStats(stats);
-      } catch {
-        setSelectedStats(null);
+        const [metadataResult, provinceResult, ridingsResult] = await Promise.allSettled([
+          loadRidingMetadataForProvince(selectedProvinceCode, activeBoundarySet, filters),
+          boundaryHasNoDonationData
+            ? Promise.resolve(null)
+            : fetchRegionStats("province", selectedProvinceCode, ridingQuery),
+          boundaryHasNoDonationData
+            ? Promise.resolve([])
+            : fetchRidingStatsByProvince(selectedProvinceCode, ridingQuery),
+        ]);
+
+        if (cancelled) return;
+
+        const metadataStats = metadataResult.status === "fulfilled" ? metadataResult.value : [];
+        const apiRidingStats = ridingsResult.status === "fulfilled" ? ridingsResult.value : [];
+        const mergedRidingStats = mergeRidingStatsWithMetadata(metadataStats, apiRidingStats);
+
+        setRidingStats(mergedRidingStats);
+
+        if (!selectedRidingCode) {
+          if (provinceResult.status === "fulfilled" && provinceResult.value) {
+            setSelectedStats({
+              ...provinceResult.value,
+              _boundarySetLabel: activeBoundarySet?.label,
+              _noDataMessage: boundaryNoDataMessage || provinceResult.value._noDataMessage,
+            });
+          } else {
+            setSelectedStats(
+              buildProvinceFallbackStats(selectedProvinceCode, activeBoundarySet, filters),
+            );
+          }
+          return;
+        }
+
+        const fallbackRiding =
+          selectedRidingInfo ||
+          mergedRidingStats.find((stat) => stat.region?.code === selectedRidingCode)?.region;
+
+        if (boundaryHasNoDonationData) {
+          setSelectedStats(
+            buildEmptyRegionStats(
+              fallbackRiding,
+              activeBoundarySet?.label,
+              filters,
+              boundaryNoDataMessage,
+            ),
+          );
+          return;
+        }
+
+        try {
+          const riding = await fetchRegionStats("riding", selectedRidingCode, ridingQuery);
+
+          if (!cancelled) {
+            setSelectedStats({
+              ...riding,
+              _boundarySetLabel: activeBoundarySet?.label,
+            });
+          }
+        } catch (error) {
+          if (!cancelled && fallbackRiding) {
+            setSelectedStats(
+              buildEmptyRegionStats(
+                fallbackRiding,
+                activeBoundarySet?.label,
+                filters,
+                buildFallbackMessage(activeBoundarySet),
+              ),
+            );
+          } else if (!cancelled) {
+            console.warn("No riding stats found and no fallback metadata available.", error);
+            setSelectedStats(null);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load province/riding data:", error);
+        if (!cancelled) {
+          setRidingStats([]);
+          setSelectedStats(
+            buildProvinceFallbackStats(selectedProvinceCode, activeBoundarySet, filters),
+          );
+        }
       } finally {
-        setPanelLoading(false);
+        if (!cancelled) setPanelLoading(false);
       }
-    },
-    [selectedCode]
-  );
+    }
+
+    loadProvinceView();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeBoundarySet,
+    boundaryHasNoDonationData,
+    boundaryNoDataMessage,
+    filters,
+    ridingQuery,
+    selectedProvinceCode,
+    selectedRidingCode,
+    selectedRidingInfo,
+  ]);
+
+  const handleSelectProvince = useCallback((code) => {
+    setSelectedProvinceCode(code);
+    setSelectedRidingCode(null);
+    setSelectedRidingInfo(null);
+    setRidingStats([]);
+    setSearchQuery("");
+    setSearchResults([]);
+    setFiltersOpen(false);
+  }, []);
+
+  const handleSelectRiding = useCallback((riding) => {
+    if (!riding?.code) return;
+
+    const enrichedRiding = {
+      level: "riding",
+      provinceCode: selectedProvinceCode || riding.provinceCode,
+      provinceName:
+        PROVINCE_NAMES[selectedProvinceCode || riding.provinceCode] ||
+        riding.provinceName,
+      boundarySet: activeBoundarySet?.code || riding.boundarySet,
+      ...riding,
+    };
+
+    setSelectedRidingCode(enrichedRiding.code);
+    setSelectedRidingInfo(enrichedRiding);
+    setSearchQuery("");
+    setSearchResults([]);
+  }, [activeBoundarySet?.code, selectedProvinceCode]);
 
   function handleBackToNational() {
-    setSelectedCode(null);
+    setSelectedProvinceCode(null);
+    setSelectedRidingCode(null);
+    setSelectedRidingInfo(null);
+    setRidingStats([]);
+    setSearchQuery("");
+    setSearchResults([]);
+
+    if (activeBoundarySet?.hasDonationData === false) {
+      setFilters(getDefaultFilters());
+      return;
+    }
+
     setSelectedStats(nationalStats);
+  }
+
+  function handlePanelBack() {
+    if (selectedRidingCode && selectedProvinceCode) {
+      setSelectedRidingCode(null);
+      setSelectedRidingInfo(null);
+      return;
+    }
+
+    handleBackToNational();
   }
 
   function handleSearch(e) {
     const q = e.target.value;
     setSearchQuery(q);
+
     if (!q.trim()) {
       setSearchResults([]);
       return;
     }
-    const matches = Object.entries(PROVINCE_NAMES).filter(
-      ([code, name]) =>
-        name.toLowerCase().includes(q.toLowerCase()) ||
-        code.toLowerCase().includes(q.toLowerCase())
-    );
+
+    const matches = viewLevel === "national"
+      ? makeProvinceSearchResults(q)
+      : makeRidingSearchResults(q, ridingStats);
+
     setSearchResults(matches);
   }
 
-  function handleSearchSelect(code) {
+  function handleSearchSelect(result) {
     setSearchQuery("");
     setSearchResults([]);
-    handleSelectProvince(code);
-  }
 
-  // Re-scope the selected region's stats by the active filters (client-side).
-  const displayedStats = useMemo(() => {
-    if (!selectedStats) return selectedStats;
-    const { partyCode, beginningYear, endingYear } = filters;
-    const isDefault =
-      partyCode === "ALL" && beginningYear === 2004 && endingYear === 2024;
-    if (isDefault) return selectedStats;
-
-    // Trend: keep only years in range
-    const trend = (selectedStats.donationsTrend || []).filter(
-      (t) => t.year >= beginningYear && t.year <= endingYear
-    );
-
-    // Totals: re-sum from the in-range trend
-    const totalDonations = trend.reduce((s, t) => s + (t.totalDonations || 0), 0);
-    const donationCount = trend.reduce((s, t) => s + (t.donationCount || 0), 0);
-    const donorCount = trend.reduce((s, t) => s + (t.donorCount || 0), 0);
-    const averageDonation = donationCount > 0 ? totalDonations / donationCount : 0;
-
-    // Party breakdown: isolate one party if selected (totals are all-years)
-    let partyStats = selectedStats.partyStats || [];
-    if (partyCode !== "ALL") {
-      partyStats = partyStats.filter((p) => p.partyCode === partyCode);
+    if (result.type === "province") {
+      handleSelectProvince(result.code);
+      return;
     }
 
-    return {
-      ...selectedStats,
-      donationsTrend: trend,
-      totals: {
-        ...selectedStats.totals,
-        totalDonations,
-        donationCount,
-        donorCount,
-        averageDonation,
-      },
-      partyStats,
-      _filtered: { partyCode, beginningYear, endingYear },
-    };
-  }, [selectedStats, filters]);
+    if (result.type === "riding") {
+      handleSelectRiding(result.region);
+    }
+  }
+
+  function handleApplyFilters(nextFilters) {
+    setFilters(nextFilters);
+    setFiltersOpen(false);
+  }
+
+  const searchPlaceholder = viewLevel === "national"
+    ? "Search Province or Territory…"
+    : `Search Ridings in ${selectedProvinceName || selectedProvinceCode}…`;
+
+  const activeFilterChips = useMemo(
+    () => buildActiveFilterChips({ filters, viewLevel, selectedProvinceCode, activeBoundarySet }),
+    [activeBoundarySet, filters, selectedProvinceCode, viewLevel],
+  );
 
   if (initialLoading) {
     return (
@@ -155,7 +552,6 @@ export default function HomePage() {
       </div>
     );
   }
-
 
   if (mapError) {
     return (
@@ -179,21 +575,26 @@ export default function HomePage() {
             <input
               className="search-input"
               type="text"
-              placeholder="Search region…"
+              placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={handleSearch}
               aria-label="Search region"
             />
-           {searchQuery.trim() && (
+            {searchQuery.trim() && (
               <ul className="search-dropdown">
                 {searchResults.length > 0 ? (
-                  searchResults.map(([code, name]) => (
-                    <li key={code} onClick={() => handleSearchSelect(code)}>
-                      <strong>{code}</strong> — {name}
+                  searchResults.map((result) => (
+                    <li
+                      key={`${result.type}-${result.code}`}
+                      onClick={() => handleSearchSelect(result)}
+                    >
+                      {result.label}
                     </li>
                   ))
                 ) : (
-                  <li className="search-noresult">No regions found</li>
+                  <li className="search-noresult">
+                    {viewLevel === "national" ? "No Regions Found" : "No Ridings Found"}
+                  </li>
                 )}
               </ul>
             )}
@@ -203,42 +604,69 @@ export default function HomePage() {
             <button
               className="nav-btn"
               onClick={() => setFiltersOpen((o) => !o)}
+              aria-expanded={filtersOpen}
             >
               Filters
             </button>
             {filtersOpen && (
               <DonationFilters
                 filters={filters}
-                onApply={setFilters}
+                viewLevel={viewLevel}
+                onApply={handleApplyFilters}
                 onClose={() => setFiltersOpen(false)}
               />
             )}
           </div>
-          <button className="nav-btn nav-btn--primary">Research Login</button>
+          <button className="nav-btn nav-btn--primary" onClick={() => navigate("/login")}>Research Login</button>
         </div>
       </header>
 
       <div className="cdmp-body">
         <div className="map-wrap">
-          <DonationMap
-            provinceStats={provinceStats}
-            selectedCode={selectedCode}
-            onSelectProvince={handleSelectProvince}
-          />
+          <ErrorBoundary label="the map" onReset={handleBackToNational}>
+            <DonationMap
+              provinceStats={provinceStats}
+              ridingStats={ridingStats}
+              viewLevel={viewLevel}
+              selectedProvinceCode={selectedProvinceCode}
+              selectedRidingCode={selectedRidingCode}
+              metricMode={filters.metricMode}
+              boundarySetCode={activeBoundarySet?.code}
+              boundarySetLabel={activeBoundarySet?.label}
+              onSelectProvince={handleSelectProvince}
+              onSelectRiding={handleSelectRiding}
+            />
+          </ErrorBoundary>
 
-          {selectedCode && (
+          <div className="active-filters-bar" aria-label="Active map filters">
+            {activeFilterChips.map((chip) => (
+              <span key={chip} className="active-filter-chip">
+                {chip}
+              </span>
+            ))}
+          </div>
+
+          {selectedProvinceCode && (
             <button className="map-back-btn" onClick={handleBackToNational}>
-              All of Canada
+              ← Back to National View
             </button>
+          )}
+
+          {selectedProvinceCode && boundaryNoDataMessage && (
+            <div className="map-no-data-banner" role="status">
+              {boundaryNoDataMessage}
+            </div>
           )}
         </div>
 
         <aside className="side-panel">
-          <RegionSummaryPanel
-            stats={displayedStats}
-            onBack={handleBackToNational}
-            loading={panelLoading}
-          />
+          <ErrorBoundary label="the region summary" compact onReset={handlePanelBack}>
+            <RegionSummaryPanel
+              stats={selectedStats}
+              onBack={handlePanelBack}
+              loading={panelLoading}
+            />
+          </ErrorBoundary>
         </aside>
       </div>
     </div>

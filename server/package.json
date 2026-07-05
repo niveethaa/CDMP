@@ -1,9 +1,11 @@
 {
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "csv-parse": "^6.2.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.0"
   },
   "devDependencies": {
@@ -19,6 +21,12 @@
     "import:donations": "node src/scripts/importDonations.js",
     "check:data": "node src/scripts/checkImportedData.js",
     "seed:regions": "node src/scripts/seedRegions.js",
-    "build:region-stats": "node src/scripts/buildRegionStats.js"
+    "build:region-stats": "node src/scripts/buildRegionStats.js",
+    "seed:boundary-sets": "node src/scripts/seedBoundarySets.js",
+    "import:postal-riding-mappings": "node src/scripts/importPostalRidingMappings.js",
+    "match:donations-to-ridings": "node src/scripts/matchDonationsToRidings.js",
+    "build:timeline-region-stats": "node src/scripts/buildTimelineRegionStats.js",
+    "seed:riding-regions": "node src/scripts/seedRidingRegions.js",
+    "import:opennorth-ridings": "node src/scripts/importOpenNorthRidingGeoJson.js"
   }
 }

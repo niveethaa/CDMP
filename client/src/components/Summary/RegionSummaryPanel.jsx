@@ -18,6 +18,21 @@ function formatNumber(n) {
   return Number(n || 0).toLocaleString("en-CA");
 }
 
+function getRegionLevelLabel(level) {
+  if (level === "national") return "National Overview";
+  if (level === "province") return "Province / Territory";
+  if (level === "riding") return "Federal Riding";
+  return "Region";
+}
+
+function hasUsableData(totals = {}) {
+  return (
+    Number(totals.totalDonations || 0) > 0 ||
+    Number(totals.donationCount || 0) > 0 ||
+    Number(totals.donorCount || 0) > 0
+  );
+}
+
 export default function RegionSummaryPanel({ stats, onBack, loading }) {
   if (loading) {
     return (
@@ -31,33 +46,35 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
   if (!stats) {
     return (
       <div className="panel-state panel-empty">
-        <p>Click any province or territory on the map to explore its donation data.</p>
+        <div className="panel-empty-icon">⌖</div>
+        <p>Click a province or territory on the map to open riding-level donation data.</p>
       </div>
     );
   }
 
-  const { region, totals, partyStats, donationsTrend, privacy } = stats;
+  const { region, totals = {}, partyStats = [], donationsTrend, privacy, filters } = stats;
   const isNational = region?.level === "national";
-  const maxParty = partyStats?.[0]?.totalDonations || 1;
-  const maxTrend = Math.max(
-    ...(donationsTrend?.map((t) => t.totalDonations) || [1]),
-    1
+  const isPerCapita = filters?.metricMode === "per_capita";
+  const isRiding = region?.level === "riding";
+  const maxParty = partyStats.reduce((m, p) => Math.max(m, p.totalDonations || 0), 1);
+  const trendMetricKey = isPerCapita ? "perCapitaAmount" : "totalDonations";
+  const maxTrend = (donationsTrend || []).reduce(
+    (m, t) => Math.max(m, t[trendMetricKey] || 0),
+    1,
   );
+  const noDataMessage = stats._noDataMessage;
+  const showNoDataHint = !noDataMessage && !hasUsableData(totals) && !privacy?.isSuppressed;
 
   return (
     <div className="region-panel">
-      {/* Header */}
-      <div className="panel-header">
+      <div className="panel-header panel-header--dashboard">
         <div className="panel-header-text">
-          <p className="panel-eyebrow">
-            {isNational ? "National Overview" : "Province / Territory"}
-          </p>
+          <p className="panel-eyebrow">{getRegionLevelLabel(region?.level)}</p>
           <h2 className="panel-title">{region?.name}</h2>
-          <p className="panel-period">2004 – 2024 · All parties</p>
         </div>
         {!isNational && (
           <button className="back-btn" onClick={onBack}>
-            Canada
+            {isRiding ? "← Province" : "← Canada"}
           </button>
         )}
       </div>
@@ -68,15 +85,26 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
         </div>
       )}
 
-      {/* Key stats */}
-      <div className="stats-grid">
+      {noDataMessage && (
+        <div className="no-data-notice">
+          {noDataMessage}
+        </div>
+      )}
+
+      {showNoDataHint && (
+        <div className="no-data-notice">
+          No donation data is available for this selection. Try selecting all parties or expanding the year range.
+        </div>
+      )}
+
+      <div className="stats-grid stats-grid--dashboard">
         <StatCard
-          label="Total Donations"
-          value={formatDollars(totals?.totalDonations)}
+          label={isPerCapita ? "Per Capita" : "Total Donations"}
+          value={isPerCapita ? formatDollars(totals?.perCapitaAmount) : formatDollars(totals?.totalDonations)}
           accent
         />
         <StatCard
-          label="# of Donations"
+          label="Donation Count"
           value={formatNumber(totals?.donationCount)}
         />
         <StatCard
@@ -84,69 +112,80 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
           value={formatNumber(totals?.donorCount)}
         />
         <StatCard
-          label="Avg Donation"
+          label="Average Donation"
           value={formatDollars(totals?.averageDonation)}
         />
+        {isPerCapita && (
+          <StatCard
+            label="Total Donations"
+            value={formatDollars(totals?.totalDonations)}
+          />
+        )}
+        {totals?.population ? (
+          <StatCard
+            label="Population"
+            value={formatNumber(totals.population)}
+          />
+        ) : null}
       </div>
 
-      {/* Party breakdown */}
       <section className="panel-section">
-        <h3 className="section-title">Party Breakdown</h3>
-        {partyStats?.map((p) => (
-          <PartyBar key={p.partyCode} party={p} maxTotal={maxParty} />
-        ))}
+        <div className="section-header-row">
+          <h3 className="section-title">Party Breakdown</h3>
+          {partyStats.length > 0 && <span className="section-count">{partyStats.length} parties</span>}
+        </div>
+        {partyStats.length > 0 ? (
+          partyStats.map((p) => (
+            <PartyBar key={p.partyCode} party={p} maxTotal={maxParty} />
+          ))
+        ) : (
+          <div className="trend-empty">No party breakdown available for this selection.</div>
+        )}
       </section>
 
-      {/* Trend */}
       <section className="panel-section">
-        <h3 className="section-title">Yearly Trend (2004 – 2024)</h3>
-        <TrendLineChart data={donationsTrend} maxTrend={maxTrend} />
+        <div className="section-header-row">
+          <h3 className="section-title">{isPerCapita ? "Yearly Per-Capita Trend" : "Yearly Trend"}</h3>
+        </div>
+        <TrendLineChart data={donationsTrend} maxTrend={maxTrend} metricMode={filters?.metricMode} />
       </section>
     </div>
   );
 }
 
-function TrendLineChart({ data, maxTrend }) {
+function TrendLineChart({ data, maxTrend, metricMode }) {
   if (!data || data.length === 0) {
-    return <div className="trend-empty">No trend data available.</div>;
+    return <div className="trend-empty">No trend data available for this selection.</div>;
   }
 
-  // viewBox coordinate space. Aspect ratio is preserved (no horizontal
-  // stretching) so axis text and tick marks stay undistorted.
   const W = 320;
   const H = 150;
-  const padTop = 10; // headroom above the highest point
-  const padLeft = 42; // gutter for Y-axis labels + title
+  const padTop = 10;
+  const padLeft = 42;
   const padRight = 8;
-  const padBottom = 34; // room for X-axis ticks + title
+  const padBottom = 34;
 
   const plotW = W - padLeft - padRight;
   const plotH = H - padTop - padBottom;
-  const baseY = padTop + plotH; // y of the zero line
-  const baseX = padLeft; // x of the axis
-
-  // Build a "nice" Y scale rounded up to a clean top value.
+  const baseY = padTop + plotH;
+  const baseX = padLeft;
   const niceMax = niceCeil(maxTrend);
-  const yTickCount = 4;
-  const yTicks = Array.from({ length: yTickCount + 1 }, (_, i) =>
-    (niceMax / yTickCount) * i
-  );
-
+  const metricKey = metricMode === "per_capita" ? "perCapitaAmount" : "totalDonations";
   const n = data.length;
-  const x = (i) =>
-    padLeft + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const x = (i) => padLeft + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
   const y = (v) => padTop + plotH - (v / niceMax) * plotH;
-
+  const yTickCount = 4;
+  const yTicks = Array.from({ length: yTickCount + 1 }, (_, i) => (niceMax / yTickCount) * i);
   const points = data.map((t, i) => ({
     ...t,
+    metricValue: t[metricKey] || 0,
     cx: x(i),
-    cy: y(t.totalDonations),
+    cy: y(t[metricKey] || 0),
   }));
 
   const linePath = points
     .map((p, i) => `${i === 0 ? "M" : "L"} ${p.cx.toFixed(2)} ${p.cy.toFixed(2)}`)
     .join(" ");
-
   const areaPath =
     `M ${points[0].cx.toFixed(2)} ${baseY.toFixed(2)} ` +
     points.map((p) => `L ${p.cx.toFixed(2)} ${p.cy.toFixed(2)}`).join(" ") +
@@ -166,31 +205,18 @@ function TrendLineChart({ data, maxTrend }) {
         </linearGradient>
       </defs>
 
-      {/* Y-axis gridlines + value labels */}
       {yTicks.map((v, i) => {
         const ty = y(v);
         return (
           <g key={`y-${i}`}>
-            <line
-              x1={baseX}
-              y1={ty}
-              x2={W - padRight}
-              y2={ty}
-              className="trend-gridline"
-            />
-            <text
-              x={baseX - 6}
-              y={ty + 3}
-              className="trend-axis-label"
-              textAnchor="end"
-            >
+            <line x1={baseX} y1={ty} x2={W - padRight} y2={ty} className="trend-gridline" />
+            <text x={baseX - 6} y={ty + 3} className="trend-axis-label" textAnchor="end">
               {formatDollars(v)}
             </text>
           </g>
         );
       })}
 
-      {/* Y-axis title (rotated) */}
       <text
         className="trend-axis-title"
         transform={`translate(10 ${padTop + plotH / 2}) rotate(-90)`}
@@ -199,7 +225,6 @@ function TrendLineChart({ data, maxTrend }) {
         Donations
       </text>
 
-      {/* Axis lines */}
       <line x1={baseX} y1={padTop} x2={baseX} y2={baseY} className="trend-axis" />
       <line x1={baseX} y1={baseY} x2={W - padRight} y2={baseY} className="trend-axis" />
 
@@ -216,47 +241,28 @@ function TrendLineChart({ data, maxTrend }) {
       {points.map((p) => (
         <g key={p.year} className="trend-point">
           <circle cx={p.cx} cy={p.cy} r="2.5" fill="#4361ee" stroke="#fff" strokeWidth="1" />
-          <title>{`${p.year}: ${formatDollars(p.totalDonations)}`}</title>
+          <title>{`${p.year}: ${formatDollars(p.metricValue)}`}</title>
         </g>
       ))}
 
-      {/* X-axis tick labels (every 4th year) */}
       {points.map((p) =>
         p.year % 4 === 0 ? (
           <g key={`x-${p.year}`}>
-            <line
-              x1={p.cx}
-              y1={baseY}
-              x2={p.cx}
-              y2={baseY + 4}
-              className="trend-axis"
-            />
-            <text
-              x={p.cx}
-              y={baseY + 14}
-              className="trend-axis-label"
-              textAnchor="middle"
-            >
+            <line x1={p.cx} y1={baseY} x2={p.cx} y2={baseY + 4} className="trend-axis" />
+            <text x={p.cx} y={baseY + 14} className="trend-axis-label" textAnchor="middle">
               {p.year}
             </text>
           </g>
-        ) : null
+        ) : null,
       )}
 
-      {/* X-axis title */}
-      <text
-        className="trend-axis-title"
-        x={baseX + plotW / 2}
-        y={H - 2}
-        textAnchor="middle"
-      >
+      <text className="trend-axis-title" x={baseX + plotW / 2} y={H - 2} textAnchor="middle">
         Year
       </text>
     </svg>
   );
 }
 
-// Round a max value up to a clean axis bound (e.g. 4.2M -> 5M).
 function niceCeil(value) {
   if (!value || value <= 0) return 1;
   const exp = Math.floor(Math.log10(value));
@@ -283,15 +289,13 @@ function StatCard({ label, value, accent }) {
 function PartyBar({ party, maxTotal }) {
   const color = PARTY_COLORS[party.partyCode] || PARTY_COLORS.UNKNOWN;
   const pct = maxTotal > 0 ? (party.totalDonations / maxTotal) * 100 : 0;
+
   return (
     <div className="party-row">
       <span className="party-dot" style={{ background: color }} />
       <span className="party-code">{party.partyCode}</span>
       <div className="bar-track">
-        <div
-          className="bar-fill"
-          style={{ width: `${pct}%`, background: color }}
-        />
+        <div className="bar-fill" style={{ width: `${pct}%`, background: color }} />
       </div>
       <span className="party-amount">
         {party.totalDonations >= 1_000_000
