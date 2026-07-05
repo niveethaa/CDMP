@@ -74,7 +74,8 @@ Authenticated Research Users Main Screen:
 - [Standup Meeting Jun 1 - Jun 7](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/2bf47786fab6db0c04cd764defef6ed6fef8bc2c/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes-Jun1-Jun7.pdf) 
 - [Standup Meeting Jun 8 - Jun 14](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/2bf47786fab6db0c04cd764defef6ed6fef8bc2c/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_Jun8-Jun14.pdf)
 - [Standup Meeting Jun 15 - Jun 21](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/f4cfd4dcd5b6da3b4b73d8599537a46ea742d27e/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_Jun15-21.pdf)
-- [Standup Meeting Jun 22 - Jun 28](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/042b7b60ce09dbe2a03c09316b05253654b5dc45/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_Jun22-28.pdf) 
+- [Standup Meeting Jun 22 - Jun 28](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/042b7b60ce09dbe2a03c09316b05253654b5dc45/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_Jun22-28.pdf)
+- [Standup Meeting Jun 29 - Jul 5](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/f3265cb0a02591b9c361767332ff43e9daf4c661/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_Jun29-Jul5.pdf)
 
 
 
