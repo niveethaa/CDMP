@@ -157,7 +157,7 @@ The fast Mongo dump restore is the recommended grading/demo path.
    docker compose run --rm data-importer npm run seed:riding-regions
    docker compose run --rm data-importer npm run import:postal-riding-mappings
    docker compose run --rm data-importer npm run import:donations -- --all
-   docker compose run --rm data-importer npm run match:donations-to-ridings
+   docker compose run --rm data-importer npm run match:donations-to-ridings -- --all
    docker compose run --rm data-importer npm run build:region-stats
    docker compose run --rm data-importer npm run build:timeline-region-stats
    docker compose run --rm data-importer npm run check:data

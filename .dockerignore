@@ -17,12 +17,15 @@ coverage
 !.env.example
 !**/.env.example
 
-data
+/data
 mongo-dump
 *.archive
 *.bson
 *.dump
 *.zip
+
+!client/public/data
+!client/public/data/**
 
 pcrf_normalization/pcfrf*
 pcrf_normalization/postal_riding*
