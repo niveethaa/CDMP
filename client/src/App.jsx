@@ -5,7 +5,7 @@ import Register from "./pages/Register";
 import PrivacyAgreement from "./pages/PrivacyAgreement";
 import Dashboard from "./pages/Dashboard";
 import AccessDenied from "./pages/AccessDenied";
-import ErrorBoundary from "./components/ErrorBoundary";
+import ErrorBoundary from "./components/ErrorBoundaryComponent";
 import "./App.css";
 
 export default function App() {

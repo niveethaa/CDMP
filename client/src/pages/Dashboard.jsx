@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-
-const API_BASE = "http://localhost:5001/api";
+import { API_BASE } from "../api/config";
 
 const DONOR_TYPES = [
   { code: "ALL", name: "All Types" },

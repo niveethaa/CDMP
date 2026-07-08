@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:5001/api";
+import { API_BASE } from "./config";
 
 function buildQuery(params = {}) {
   const query = new URLSearchParams();
