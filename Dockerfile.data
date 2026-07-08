@@ -11,6 +11,7 @@ RUN cd server && npm ci
 
 COPY server ./server
 COPY pcrf_normalization/normalize_pcfrf.py ./pcrf_normalization/normalize_pcfrf.py
+COPY client/public/data/ridings ./client/public/data/ridings
 
 WORKDIR /app/server
 

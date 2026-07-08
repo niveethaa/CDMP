@@ -8,8 +8,7 @@ The Docker setup uses a local MongoDB container instead of MongoDB Atlas.
 ## Prerequisites
 
 - Docker Desktop
-- A MongoDB dump archive from the shared data folder
-- Optional raw data files if rebuilding the database from source
+- The Google Drive upload zip, which contains the MongoDB dump and raw data
 
 Expected local ports:
 
@@ -36,13 +35,20 @@ This is the path a professor should use for grading or demo.
    cd course-project-nacss
    ```
 
-3. Download the MongoDB dump from Google Drive and place it here:
+3. Download `course-project-nacss-drive-upload-2026-07-08.zip` from Google
+   Drive into the project root and unzip it.
+
+   ```bash
+   unzip -n course-project-nacss-drive-upload-2026-07-08.zip
+   ```
+
+   After unzipping, this file should exist:
 
    ```text
    mongo-dump/course_project_nacss.archive
    ```
 
-   This archive is large and should stay in Google Drive, not GitHub.
+   The zip and archive are large and should stay in Google Drive, not GitHub.
 
 4. Start the containers.
 
@@ -93,36 +99,56 @@ This is the path a professor should use for grading or demo.
 Use this path only when you need to prove or rerun the source-data pipeline.
 The fast Mongo dump restore is the recommended grading/demo path.
 
-1. Download raw data from Google Drive into:
+1. Download and unzip `course-project-nacss-drive-upload-2026-07-08.zip` into
+   the project root.
+
+   ```bash
+   unzip -n course-project-nacss-drive-upload-2026-07-08.zip
+   ```
+
+   The unzipped package should provide:
 
    ```text
    data/donation/raw/
    data/open-north-ridings/
+   data/pcfrf-sources/
+   data/reference/postal_riding_mappings.csv
+   data/reference/postal_riding_mapping_sources.csv
    ```
 
-2. Generate or download the postal-riding mapping file.
+2. Use or regenerate the postal-riding mapping file.
 
    The backend importer expects:
 
    ```text
    data/reference/postal_riding_mappings.csv
+   data/reference/postal_riding_mapping_sources.csv
    ```
 
-   To regenerate it with the Python normalizer, run `data-importer` with the
-   source PCFRF zip/text files mounted under `data/` or another local path.
-   The normalizer accepts one or more `--source` arguments:
+   The zip already includes `postal_riding_mappings.csv`, so this step can be
+   skipped unless you want to prove the Python normalization step. To regenerate
+   the CSV from the included PCFRF source zips:
 
    ```bash
    docker compose run --rm data-importer \
      python3 /app/pcrf_normalization/normalize_pcfrf.py \
-     --source "federal_ridings_2013,2022-12,PCFRF_FCPCF_V2212_2021,/data/path-to-source.zip" \
+     --source "federal_ridings_2003,2006-09,PCFRF_2003_SEP06,/data/pcfrf-sources/pcfrfnatfed308_sep06_fcpcefnatcef308.zip" \
+     --source "federal_ridings_2013,2022-12,PCFRF_2013_V2212,/data/pcfrf-sources/PCFRF_FCPCF_V2212_2021.zip" \
+     --source "federal_ridings_2023,2026-06,PCFRF_2023_V2606,/data/pcfrf-sources/doi-10.5683-sp4-v748yy.zip" \
      --output /data/reference/postal_riding_mappings.csv
    ```
 
-   Replace the sample source path with the actual downloaded PCFRF file. Use
-   the manifest from the data package to identify the exact source files.
+   `data/reference/postal_riding_mapping_sources.csv` records the source files
+   and normalization notes.
 
-3. Import and build the database.
+3. Reset the local MongoDB volume if you are rebuilding from scratch.
+
+   ```bash
+   docker compose down -v
+   docker compose up --build -d mongo
+   ```
+
+4. Import and build the database.
 
    ```bash
    docker compose run --rm data-importer npm run seed:parties
@@ -137,7 +163,7 @@ The fast Mongo dump restore is the recommended grading/demo path.
    docker compose run --rm data-importer npm run check:data
    ```
 
-4. Optionally create a new dump after a successful rebuild.
+5. Optionally create a new dump after a successful rebuild.
 
    ```bash
    docker compose exec mongo mongodump --archive=/tmp/course_project_nacss.archive --db course_project_nacss
@@ -152,7 +178,7 @@ Use this layout for the shared data folder:
 course-project-nacss-data/
   mongo-dump/
     course_project_nacss.archive
-  raw/
+  data/
     donation/
       raw/
         2004/
@@ -160,22 +186,55 @@ course-project-nacss-data/
         ...
         PRE2004/
     open-north-ridings/
-  generated/
+    reference/
+      postal_riding_mappings.csv
+      postal_riding_mapping_sources.csv
+    pcfrf-sources/
+      pcfrfnatfed308_sep06_fcpcefnatcef308.zip
+      PCFRF_FCPCF_V2212_2021.zip
+      doi-10.5683-sp4-v748yy.zip
+  pcrf_normalization/
+    normalize_pcfrf.py
+  DOCKER.md
+  DATA_README.md
+```
+
+The current upload package is:
+
+```text
+course-project-nacss-drive-upload-2026-07-08.zip
+```
+
+It contains:
+
+```text
+mongo-dump/course_project_nacss.archive
+data/donation/raw/
+data/open-north-ridings/
+data/reference/
+data/pcfrf-sources/
+pcrf_normalization/normalize_pcfrf.py
+DOCKER.md
+DATA_README.md
+```
+
+The generated reference files are:
+
+```text
+data/reference/
     postal_riding_mappings.csv
-    pcfrf_source_manifest.csv
-  README_DATA.md
+    postal_riding_mapping_sources.csv
 ```
 
 Google Drive links:
 
-- Mongo dump: `<insert Google Drive link>`
-- Raw donation and riding data: `<insert Google Drive link>`
-- Generated postal-riding mapping files: `<insert Google Drive link>`
+- Full data package zip: `<insert Google Drive link>`
 
 ## Troubleshooting
 
 - If restore fails with `archive not found`, confirm the file is at `mongo-dump/course_project_nacss.archive`.
 - If map or dashboard APIs return empty data, restore the Mongo dump or run the full import pipeline.
 - If `import:postal-riding-mappings` fails, confirm `data/reference/postal_riding_mappings.csv` exists.
+- If the full rebuild cannot find raw donation files, confirm the zip was extracted from the project root.
 - If Docker build fails in `client`, run `cd client && npm install` locally to refresh missing dependencies, then rebuild.
 - If you need to reset all imported data, run `docker compose down -v` and restore the dump again.
