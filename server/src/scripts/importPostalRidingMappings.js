@@ -17,6 +17,11 @@ const DEFAULT_MAPPING_FILE = path.join(
   "reference",
   "postal_riding_mappings.csv",
 );
+const DOCKER_MAPPING_FILE = path.join(
+  "/data",
+  "reference",
+  "postal_riding_mappings.csv",
+);
 
 const BULK_WRITE_SIZE = 1000;
 const REFERENCE_TYPE = "postal_riding_mapping";
@@ -42,6 +47,22 @@ const REQUIRED_FIELDS = [
 function getArgValue(flagName) {
   const index = process.argv.indexOf(flagName);
   return index === -1 ? null : process.argv[index + 1] || null;
+}
+
+function getMappingFilePath() {
+  if (process.env.POSTAL_RIDING_MAPPING_FILE) {
+    return path.resolve(process.env.POSTAL_RIDING_MAPPING_FILE);
+  }
+
+  if (fs.existsSync(DEFAULT_MAPPING_FILE)) {
+    return DEFAULT_MAPPING_FILE;
+  }
+
+  if (fs.existsSync(DOCKER_MAPPING_FILE)) {
+    return DOCKER_MAPPING_FILE;
+  }
+
+  return DEFAULT_MAPPING_FILE;
 }
 
 function cleanString(value) {
@@ -342,7 +363,7 @@ async function main() {
   try {
     await connectDB();
 
-    const filePath = getArgValue("--file") || DEFAULT_MAPPING_FILE;
+    const filePath = getArgValue("--file") || getMappingFilePath();
 
     await importPostalRidingMappings(filePath);
   } catch (error) {

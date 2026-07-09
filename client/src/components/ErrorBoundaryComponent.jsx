@@ -1,17 +1,5 @@
 import { Component } from "react";
 
-/**
- * Catches render/lifecycle exceptions in the subtree and shows a fallback
- * instead of letting the whole app unmount to a blank white screen.
- *
- * Usage:
- *   <ErrorBoundary label="the map">
- *     <DonationMap ... />
- *   </ErrorBoundary>
- *
- * Optionally pass `onReset` to clear the parent state that triggered the crash
- * (e.g. deselect the riding) so the user can recover without a full refresh.
- */
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -23,7 +11,6 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    // Surface details in the console for developers; users see the fallback.
     console.error(
       `[ErrorBoundary${this.props.label ? ` · ${this.props.label}` : ""}]`,
       error,

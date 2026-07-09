@@ -33,6 +33,10 @@ data/
 !client/public/data/ridings/**
 server/data/
 *.zip
+mongo-dump/
+*.archive
+*.bson
+*.dump
 
 # Local PCRF normlaization files
 pcrf_normalization/pcfrf*
