@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DonationMap from "../components/Map/DonationMap";
 import RegionSummaryPanel from "../components/Summary/RegionSummaryPanel";
 import DonationFilters from "../components/Filters/DonationFilters";
-import ErrorBoundary from "../components/ErrorBoundary";
+import ErrorBoundary from "../components/ErrorBoundaryComponent";
 import {
   fetchNationalStats,
   fetchAllProvinceStats,

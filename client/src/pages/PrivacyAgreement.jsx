@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE } from "../api/config";
 
 export default function PrivacyAgreement() {
   const [agree, setAgree] = useState(false);
@@ -13,7 +14,7 @@ export default function PrivacyAgreement() {
 
     const token = localStorage.getItem("token");
 
-    const response = await fetch("http://localhost:5001/api/auth/agree-privacy", {
+    const response = await fetch(`${API_BASE}/auth/agree-privacy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

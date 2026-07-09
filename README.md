@@ -1,5 +1,12 @@
 ## Project Overview
 
+## Docker Setup
+
+For local Docker setup, MongoDB dump restore, and full data rebuild
+instructions, see [DOCKER.md](./DOCKER.md). Large raw and generated data files
+are intentionally kept out of GitHub; see [DATA_README.md](./DATA_README.md)
+for the expected external data package layout.
+
 ## Description
 
 **Product Name**: CDMP (Canadian Donation Map)
