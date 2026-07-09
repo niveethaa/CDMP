@@ -68,8 +68,7 @@ Authenticated Research Users Main Screen:
 [Class Diagram](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/c3f23c71c1def50fddaddfb52e888613b31cafa7/documentation/ClassDiagram.png)
 
 ## Software Releases
-(To be Added)
-
+- [Version 0.1.0](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/wiki/Version-0.1.0-Release) - July 9, 2026
 
 ## Meeting Minutes
 **Demo Meeting Notes**
