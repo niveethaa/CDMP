@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/config";
+import DonationAnalytics from "./DonationAnalytics";
 
 const DONOR_TYPES = [
   { code: "ALL", name: "All Types" },
@@ -46,6 +47,8 @@ export default function Dashboard() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   const [donorType, setDonorType] = useState("ALL");
   const [province, setProvince] = useState("ALL");
@@ -100,9 +103,37 @@ export default function Dashboard() {
     }
   }, [token]);
 
+  const fetchAnalytics = useCallback(async (filters) => {
+    setAnalyticsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        donorType: filters.donorType,
+        province: filters.province,
+        party: filters.party,
+        year: filters.year,
+        riding: filters.riding,
+        search: filters.search,
+      });
+
+      const res = await fetch(`${API_BASE}/research/analytics?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setAnalytics(data);
+    } catch (err) {
+      console.error("Failed to fetch analytics:", err.message);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchDonations(appliedFilters, page);
-  }, [appliedFilters, page, fetchDonations]);
+    fetchAnalytics(appliedFilters);
+  }, [appliedFilters, page, fetchDonations, fetchAnalytics]);
 
   function handleApplyFilters() {
     setPage(1);
@@ -298,14 +329,25 @@ export default function Dashboard() {
 
       <div className="activity">
         <h3>Research Activity</h3>
-        <p>All queries and exports are logged.</p>
+          <p>All queries and exports are logged.</p>
         <hr />
         <h3>Access Status</h3>
         <p>Research Tier Active</p>
         <p style={{ color: "#64748b", fontSize: 13, marginTop: 8 }}>
           {total.toLocaleString()} records match current filters
         </p>
-        <button onClick={handleLogout} style={{ marginTop: 16, width: "100%", padding: "9px", background: "#1e2235", border: "1px solid #2e3550", color: "#94a3b8", borderRadius: "8px", cursor: "pointer" }}>
+        <button
+          onClick={() => navigate("/")}
+          style={{ marginTop: 16, width: "100%", padding: "9px", background: "#4361ee", border: "none", color: "#fff", borderRadius: "8px", cursor: "pointer" }}
+        >
+          View Public Map
+        </button>
+        {analyticsLoading ? (
+          <p style={{ color: "#64748b", fontSize: 13, marginTop: 16 }}>Loading charts...</p>
+        ) : (
+          <DonationAnalytics analytics={analytics} />
+        )}
+        <button onClick={handleLogout} style={{ marginTop: 8, width: "100%", padding: "9px", background: "#1e2235", border: "1px solid #2e3550", color: "#94a3b8", borderRadius: "8px", cursor: "pointer" }}>
           Logout
         </button>
       </div>

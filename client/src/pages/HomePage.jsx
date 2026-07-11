@@ -617,8 +617,24 @@ export default function HomePage() {
               />
             )}
           </div>
-          <button className="nav-btn nav-btn--primary" onClick={() => navigate("/login")}>Research Login</button>
-        </div>
+            {localStorage.getItem("token") ? (
+            <>
+              <button className="nav-btn nav-btn--primary" onClick={() => navigate("/dashboard")}>
+                Back to Dashboard
+              </button>
+              <button className="nav-btn" onClick={() => {
+                localStorage.removeItem("token");
+                navigate("/");
+              }}>
+                Logout
+              </button>
+            </>
+            ) : (
+              <button className="nav-btn nav-btn--primary" onClick={() => navigate("/login")}>
+                Research Login
+              </button>
+            )}
+          </div>
       </header>
 
       <div className="cdmp-body">

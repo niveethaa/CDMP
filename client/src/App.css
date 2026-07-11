@@ -1147,11 +1147,12 @@ body {
 .dashboard tr:hover td { background: #131625; }
 
 .dashboard .activity {
-  width: 220px;
+  width: 300px;
   background: #0d0f1a;
   border-left: 1px solid #1e2235;
   padding: 20px;
   flex-shrink: 0;
+  overflow-y: auto;
 }
 
 .dashboard .activity h3 {
