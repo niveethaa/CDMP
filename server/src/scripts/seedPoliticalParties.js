@@ -12,7 +12,13 @@ const parties = [
   {
     code: "CPC",
     name: "Conservative Party of Canada",
-    aliases: ["Conservative", "Conservative Party"],
+    aliases: [
+      "Conservative",
+      "Conservative Party",
+      "Progressive Conservative",
+      "Reform Party of Canada",
+      "Canadian Alliance",
+    ],
     active: true,
   },
   {

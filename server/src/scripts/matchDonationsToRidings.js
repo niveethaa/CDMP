@@ -12,7 +12,7 @@ const DonationRidingAssignment = require("../models/DonationRidingAssignment");
 const DONATION_BATCH_SIZE = 1000;
 const BULK_WRITE_SIZE = 1000;
 
-const DEFAULT_BEGINNING_YEAR = 2004;
+const DEFAULT_BEGINNING_YEAR = 1993;
 const DEFAULT_ENDING_YEAR = 2024;
 
 const NO_POSTAL_CODE_NOTE = "Donation has no postal code.";
