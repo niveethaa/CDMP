@@ -139,6 +139,3 @@ User needs to make sure in `server/.env` has:
 
 The user then has access to the dashboard where they can view individual donation records and filter by donor type, province, party, year, riding, and search donor name. They can also export a CSV file of the data. As well as, all the queries and exports are logged to the activity log.
 
-
-
->>>>>>> Stashed changes
