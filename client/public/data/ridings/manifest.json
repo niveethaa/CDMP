@@ -2,7 +2,7 @@
   "version": 1,
   "boundarySets": {
     "federal_ridings_2003": {
-      "label": "2004–2014 · 2003 Riding Map",
+      "label": "2004\u20132014 \u00b7 2003 Riding Map",
       "shortLabel": "2003 Map",
       "validFromYear": 2004,
       "validToYear": 2014,
@@ -94,7 +94,7 @@
       }
     },
     "federal_ridings_2013": {
-      "label": "2015–2024 · 2013 Riding Map",
+      "label": "2015\u20132024 \u00b7 2013 Riding Map",
       "shortLabel": "2013 Map",
       "validFromYear": 2015,
       "validToYear": 2024,
@@ -184,8 +184,100 @@
           "featureCount": 1
         }
       }
+    },
+    "federal_ridings_1996": {
+      "label": "1997\u20132003 \u00b7 1996 Riding Map",
+      "shortLabel": "1996 Map",
+      "validFromYear": 1997,
+      "validToYear": 2003,
+      "expectedCount": 301,
+      "featureCount": 301,
+      "source": "GeoGratis / Elections Canada",
+      "sourceUrl": "https://ftp.geogratis.gc.ca/pub/nrcan_rncan/vector/electoral/2000/fed301.2000.zip",
+      "geometryMode": "geogratis",
+      "generatedAt": "2026-07-10T22:15:00.000Z",
+      "provinces": {
+        "NL": {
+          "name": "Newfoundland and Labrador",
+          "file": "NL.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/NL.json",
+          "featureCount": 7
+        },
+        "PE": {
+          "name": "Prince Edward Island",
+          "file": "PE.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/PE.json",
+          "featureCount": 4
+        },
+        "NS": {
+          "name": "Nova Scotia",
+          "file": "NS.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/NS.json",
+          "featureCount": 11
+        },
+        "NB": {
+          "name": "New Brunswick",
+          "file": "NB.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/NB.json",
+          "featureCount": 10
+        },
+        "QC": {
+          "name": "Quebec",
+          "file": "QC.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/QC.json",
+          "featureCount": 75
+        },
+        "ON": {
+          "name": "Ontario",
+          "file": "ON.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/ON.json",
+          "featureCount": 103
+        },
+        "MB": {
+          "name": "Manitoba",
+          "file": "MB.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/MB.json",
+          "featureCount": 14
+        },
+        "SK": {
+          "name": "Saskatchewan",
+          "file": "SK.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/SK.json",
+          "featureCount": 14
+        },
+        "AB": {
+          "name": "Alberta",
+          "file": "AB.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/AB.json",
+          "featureCount": 26
+        },
+        "BC": {
+          "name": "British Columbia",
+          "file": "BC.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/BC.json",
+          "featureCount": 34
+        },
+        "YT": {
+          "name": "Yukon",
+          "file": "YT.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/YT.json",
+          "featureCount": 1
+        },
+        "NT": {
+          "name": "Northwest Territories",
+          "file": "NT.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/NT.json",
+          "featureCount": 1
+        },
+        "NU": {
+          "name": "Nunavut",
+          "file": "NU.json",
+          "publicPath": "/data/ridings/federal_ridings_1996/NU.json",
+          "featureCount": 1
+        }
+      }
     }
   },
-  "generatedAt": "2026-07-02T18:32:01.027Z",
-  "source": "OpenNorth Represent API"
+  "generatedAt": "2026-07-10T22:15:00.000Z",
+  "source": "OpenNorth Represent API; GeoGratis / Elections Canada"
 }

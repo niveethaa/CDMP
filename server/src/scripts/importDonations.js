@@ -26,6 +26,42 @@ const FALLBACK_DATA_ROOT = path.join(
   "raw",
 );
 
+const MODERN_BEGINNING_YEAR = 2004;
+const MODERN_ENDING_YEAR = 2024;
+
+const PRE_2004_FILE_INFO = {
+  "candidate_pre_2000_contributors_e.csv": {
+    year: 1993,
+    partyCode: "MULTI",
+    dataEra: "pre_2004",
+    canonical: true,
+  },
+  "candidate_2000_2004_contributors_audt_e.csv": {
+    year: 2000,
+    partyCode: "MULTI",
+    dataEra: "pre_2004",
+    canonical: false,
+  },
+  "candidate_2000_2004_contributors_audt_e_utf8.csv": {
+    year: 2000,
+    partyCode: "MULTI",
+    dataEra: "pre_2004",
+    canonical: true,
+  },
+  "party_annual_2000-2004_contributors_e.csv": {
+    year: 2001,
+    partyCode: "MULTI",
+    dataEra: "pre_2004",
+    canonical: false,
+  },
+  "party_annual_2000-2004_contributors_e_utf8.csv": {
+    year: 2001,
+    partyCode: "MULTI",
+    dataEra: "pre_2004",
+    canonical: true,
+  },
+};
+
 const INSERT_CHUNK_SIZE = 1000;
 
 function getArgValue(flagName) {
@@ -60,6 +96,15 @@ function getDataRoot() {
 
 function getFileInfo(filePath) {
   const fileName = path.basename(filePath);
+  const pre2004Info = PRE_2004_FILE_INFO[fileName];
+
+  if (pre2004Info) {
+    return {
+      fileName,
+      ...pre2004Info,
+    };
+  }
+
   const match = fileName.match(/^([A-Za-z]+)(\d{4})\.csv$/);
 
   if (!match) {
@@ -67,6 +112,7 @@ function getFileInfo(filePath) {
       fileName: fileName,
       partyCode: "UNKNOWN",
       year: null,
+      dataEra: "unknown",
     };
   }
 
@@ -74,6 +120,7 @@ function getFileInfo(filePath) {
     fileName: fileName,
     partyCode: match[1].toUpperCase(),
     year: Number(match[2]),
+    dataEra: "modern",
   };
 }
 
@@ -117,27 +164,35 @@ function getFilesToImport() {
   }
 
   const allCsvFiles = getAllCsvFiles(dataRoot);
-  const modernFiles = [];
+  const donationFiles = [];
 
   for (const filePath of allCsvFiles) {
     const fileInfo = getFileInfo(filePath);
 
-    if (fileInfo.year >= 2004 && fileInfo.year <= 2024) {
-      modernFiles.push(filePath);
+    if (
+      fileInfo.dataEra === "modern" &&
+      fileInfo.year >= MODERN_BEGINNING_YEAR &&
+      fileInfo.year <= MODERN_ENDING_YEAR
+    ) {
+      donationFiles.push(filePath);
+    }
+
+    if (fileInfo.dataEra === "pre_2004" && fileInfo.canonical) {
+      donationFiles.push(filePath);
     }
   }
 
-  if (modernFiles.length === 0) {
-    throw new Error(`No modern CSV files found under ${dataRoot}`);
+  if (donationFiles.length === 0) {
+    throw new Error(`No donation CSV files found under ${dataRoot}`);
   }
 
   if (importAll) {
-    return modernFiles;
+    return donationFiles;
   }
 
-  let sampleFile = modernFiles[0];
+  let sampleFile = donationFiles[0];
 
-  for (const filePath of modernFiles) {
+  for (const filePath of donationFiles) {
     if (path.basename(filePath) === "BQ2024.csv") {
       sampleFile = filePath;
       break;
@@ -146,13 +201,24 @@ function getFilesToImport() {
 
   console.log("No --file or --all flag provided.");
   console.log(`Defaulting to one sample file: ${sampleFile}`);
-  console.log("Use --all later to import all modern CSV files.");
+  console.log("Use --all later to import all donation CSV files.");
 
   return [sampleFile];
 }
 
+function readCsvText(filePath) {
+  const buffer = fs.readFileSync(filePath);
+  const utf8Text = buffer.toString("utf8");
+
+  if (utf8Text.includes("\uFFFD")) {
+    return buffer.toString("latin1");
+  }
+
+  return utf8Text;
+}
+
 function readModernDonationCsv(filePath) {
-  const csvText = fs.readFileSync(filePath, "utf8");
+  const csvText = readCsvText(filePath);
 
   const rows = parse(csvText, {
     columns: true,
@@ -167,8 +233,64 @@ function readModernDonationCsv(filePath) {
   return rows;
 }
 
+function normalizeRowKeys(row) {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [key.trim(), value]),
+  );
+}
+
+function readPre2004DonationCsv(filePath) {
+  const csvText = readCsvText(filePath);
+
+  return parse(csvText, {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true,
+    bom: true,
+    relax_column_count: true,
+    relax_quotes: true,
+  }).map(normalizeRowKeys);
+}
+
 function cleanString(value) {
   return String(value || "").trim();
+}
+
+function normalizeProvinceCode(value) {
+  const normalized = cleanString(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "");
+
+  const aliases = {
+    ALBERTA: "AB",
+    BC: "BC",
+    BRITISHCOLUMBIA: "BC",
+    MANITOBA: "MB",
+    NEWBRUNSWICK: "NB",
+    NEWFOUNDLAND: "NL",
+    NEWFOUNDLANDANDLABRADOR: "NL",
+    NF: "NL",
+    NFLD: "NL",
+    NOVASCOTIA: "NS",
+    NWT: "NT",
+    NORTHWESTTERRITORIES: "NT",
+    NUNAVUT: "NU",
+    NV: "NU",
+    ONT: "ON",
+    ONTARIO: "ON",
+    PEI: "PE",
+    PRINCEEDWARDISLAND: "PE",
+    PQ: "QC",
+    QUE: "QC",
+    QUEBEC: "QC",
+    SASKATCHEWAN: "SK",
+    YK: "YT",
+    YUKON: "YT",
+  };
+
+  return aliases[normalized] || normalized;
 }
 
 function buildPersonName(firstName, middleName, lastName) {
@@ -214,6 +336,7 @@ function buildDonationDocument(row, fileInfo, rowIndex, importDataBatchId) {
   const amountTotal = amountMonetary + amountNonMonetary;
 
   const postal = normalizePostalCode(row.Postal_code);
+  const provinceCode = normalizeProvinceCode(row.Province);
   const party = getPartyInfo(row, fileInfo);
 
   const donorDisplayName = buildPersonName(
@@ -245,7 +368,7 @@ function buildDonationDocument(row, fileInfo, rowIndex, importDataBatchId) {
       donorMiddleName: cleanString(row.Contributor_middle_initial),
       donorDisplayName: donorDisplayName,
       city: cleanString(row.City),
-      province: cleanString(row.Province),
+      province: provinceCode,
       postalCode: postal.postalCode,
       fsa: postal.fsa,
     },
@@ -271,7 +394,116 @@ function buildDonationDocument(row, fileInfo, rowIndex, importDataBatchId) {
     },
 
     geography: {
-      provinceCode: cleanString(row.Province),
+      provinceCode: provinceCode,
+      provinceName: "",
+      ridingCode: "",
+      ridingName: "",
+      boundarySet: "",
+      geoCodeStatus: "not_attempted",
+      latitude: undefined,
+      longitude: undefined,
+    },
+
+    access: {
+      individualRecordRestricted: true,
+      publicAggregationAllowed: true,
+    },
+
+    raw: row,
+  };
+}
+
+function getPre2004Year(row, fileInfo) {
+  const fiscalDate = cleanString(row["Fiscal date"]);
+  const match = fiscalDate.match(/^(\d{4})/);
+
+  if (match) {
+    return Number(match[1]);
+  }
+
+  return fileInfo.year;
+}
+
+function getPre2004Party(row) {
+  const normalizedParty = normalizeParty(row["Political Party"]);
+
+  return {
+    code: normalizedParty.code,
+    name: normalizedParty.name || "Unknown Party",
+  };
+}
+
+function buildPre2004DonationDocument(
+  row,
+  fileInfo,
+  rowIndex,
+  importDataBatchId,
+) {
+  const amountMonetary = parseAmount(row["Monetary amount"]);
+  const amountNonMonetary = parseAmount(row["Non-Monetary amount"]);
+  const amountTotal = amountMonetary + amountNonMonetary;
+  const postal = normalizePostalCode(row["Contributor Postal code"]);
+  const provinceCode = normalizeProvinceCode(row["Contributor Province"]);
+  const party = getPre2004Party(row);
+
+  const donorDisplayName =
+    buildPersonName(
+      row["Contributor first name"],
+      "",
+      row["Contributor last name"],
+    ) || cleanString(row["Contributor name"]);
+
+  const recipientName =
+    buildPersonName(
+      row["Recipient first name"],
+      row["Recipient middle initial"],
+      row["Recipient last name"],
+    ) || cleanString(row.Recipient);
+
+  return {
+    source: {
+      fileName: fileInfo.fileName,
+      year: getPre2004Year(row, fileInfo),
+      rowNumber: rowIndex + 2,
+      partyCode: party.code,
+      dataEra: "pre_2004",
+      importDataBatchId: importDataBatchId,
+    },
+
+    donor: {
+      donorType: cleanString(row["Contributor type"]),
+      donorFirstName: cleanString(row["Contributor first name"]),
+      donorLastName: cleanString(row["Contributor last name"]),
+      donorMiddleName: "",
+      donorDisplayName,
+      city: cleanString(row["Contributor City"]),
+      province: provinceCode,
+      postalCode: postal.postalCode,
+      fsa: postal.fsa,
+    },
+
+    party: {
+      code: party.code,
+      name: party.name,
+    },
+
+    recipient: {
+      id: cleanString(row["Recipient ID"]),
+      name: recipientName,
+      politicalEntity: cleanString(row["Political Entity"]),
+      electoralDistrict: cleanString(row["Electoral District"]),
+      electoralEvent: cleanString(row["Electoral event"]),
+    },
+
+    contribution: {
+      dateReceived: parseDate(row["Fiscal date"]),
+      amountMonetary,
+      amountNonMonetary,
+      amountTotal,
+    },
+
+    geography: {
+      provinceCode,
       provinceName: "",
       ridingCode: "",
       ridingName: "",
@@ -310,6 +542,7 @@ async function insertInChunks(documents) {
 
 async function importCsvFile(filePath) {
   const fileInfo = getFileInfo(filePath);
+  const dataEra = fileInfo.dataEra || "modern";
 
   if (!fileInfo.year) {
     throw new Error(
@@ -327,7 +560,7 @@ async function importCsvFile(filePath) {
         source: filePath,
         year: fileInfo.year,
         partyCode: fileInfo.partyCode,
-        dataEra: "modern",
+        dataEra,
         status: "processing",
         errorMessage: "",
       },
@@ -339,7 +572,10 @@ async function importCsvFile(filePath) {
   );
 
   try {
-    const rows = readModernDonationCsv(filePath);
+    const rows =
+      dataEra === "pre_2004"
+        ? readPre2004DonationCsv(filePath)
+        : readModernDonationCsv(filePath);
 
     const deleteResult = await Donation.deleteMany({
       "source.fileName": fileInfo.fileName,
@@ -357,12 +593,15 @@ async function importCsvFile(filePath) {
     for (let index = 0; index < rows.length; index++) {
       const row = rows[index];
 
-      const document = buildDonationDocument(
-        row,
-        fileInfo,
-        index,
-        importBatch._id,
-      );
+      const document =
+        dataEra === "pre_2004"
+          ? buildPre2004DonationDocument(
+              row,
+              fileInfo,
+              index,
+              importBatch._id,
+            )
+          : buildDonationDocument(row, fileInfo, index, importBatch._id);
 
       try {
         await new Donation(document).validate();
@@ -372,7 +611,7 @@ async function importCsvFile(filePath) {
 
         if (skippedCount <= 5) {
           console.warn(
-            `Skipping row ${index + 6} in ${fileInfo.fileName}: ${validationError.message}`,
+            `Skipping row ${document.source.rowNumber} in ${fileInfo.fileName}: ${validationError.message}`,
           );
         }
       }
@@ -444,6 +683,10 @@ if (require.main === module) {
 
 module.exports = {
   getFileInfo,
+  getFilesToImport,
   readModernDonationCsv,
+  readPre2004DonationCsv,
   buildDonationDocument,
+  buildPre2004DonationDocument,
+  normalizeProvinceCode,
 };

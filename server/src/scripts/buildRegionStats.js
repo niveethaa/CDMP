@@ -10,7 +10,7 @@ const Donation = require("../models/Donation");
 const Region = require("../models/Region");
 const RegionStat = require("../models/RegionStat");
 
-const BEGINNING_YEAR = 2004;
+const BEGINNING_YEAR = 1993;
 const ENDING_YEAR = 2024;
 const PARTY_CODE = "ALL";
 const METRIC_MODE = "total";
@@ -522,7 +522,7 @@ async function buildRegionStats() {
 
     if (donationCount === 0) {
       throw new Error(
-        "No Donation records found for 2004-2024. Import donations first.",
+        "No Donation records found for 1993-2024. Import donations first.",
       );
     }
 
