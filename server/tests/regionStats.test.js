@@ -112,7 +112,7 @@ describe("RegionStat aggregation helpers", () => {
       expect(regionStat.region).toEqual(nationalRegion);
 
       expect(regionStat.filters).toEqual({
-        beginningYear: 2004,
+        beginningYear: 1993,
         endingYear: 2024,
         partyCode: "ALL",
         metricMode: "total",
