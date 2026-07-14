@@ -1,0 +1,42 @@
+name: Publish Docker images
+
+# Only publish on pushes to develop (not every PR — you don't want
+# to publish images from unmerged branches)
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    # Permission for the workflow to write packages to GHCR
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        include:
+          - image: server
+            context: ./server
+          - image: client
+            context: ./client
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.image }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ghcr.io/${{ github.repository }}-${{ matrix.image }}:latest
