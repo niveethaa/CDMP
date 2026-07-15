@@ -336,10 +336,12 @@ export default function Dashboard() {
         <p style={{ color: "#64748b", fontSize: 13, marginTop: 8 }}>
           {total.toLocaleString()} records match current filters
         </p>
-        <button
-          onClick={() => navigate("/")}
-          style={{ marginTop: 16, width: "100%", padding: "9px", background: "#4361ee", border: "none", color: "#fff", borderRadius: "8px", cursor: "pointer" }}
-        >
+        <button className="map-preview-btn" onClick={() => navigate("/")}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+            <line x1="9" y1="3" x2="9" y2="18" />
+            <line x1="15" y1="6" x2="15" y2="21" />
+          </svg>
           View Public Map
         </button>
         {analyticsLoading ? (
