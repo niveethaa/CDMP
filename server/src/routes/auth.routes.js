@@ -99,5 +99,55 @@ router.post("/agree-privacy", requireAuth, async (req, res) => {
     res.status(500).json({ message: "Failed to record privacy agreement." });
   }
 });
+// GET /api/auth/me
+router.get("/me", requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    res.json({ email: user.email, role: user.role, createdAt: user.createdAt });
+  } catch (error) {
+    console.error("GET /api/auth/me error:", error.message);
+    res.status(500).json({ message: "Failed to fetch account info." });
+  }
+});
 
+// PUT /api/auth/change-password
+router.put("/change-password", requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Current and new password are required." });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: "New password must be at least 8 characters." });
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if (!match) {
+      return res.status(401).json({ message: "Current password is incorrect." });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    await ActivityLog.create({
+      user: user._id,
+      email: user.email,
+      action: "password_change",
+    });
+
+    res.json({ message: "Password updated successfully." });
+  } catch (error) {
+    console.error("PUT /api/auth/change-password error:", error.message);
+    res.status(500).json({ message: "Failed to change password." });
+  }
+});
 module.exports = router;

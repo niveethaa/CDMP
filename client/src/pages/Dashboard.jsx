@@ -31,9 +31,9 @@ export default function Dashboard() {
         </select>
         <button>Apply Filters</button>
         <button>Export CSV</button>
+        <button onClick={() => navigate("/account")}>My Account</button>
         <button onClick={handleLogout}>Logout</button>
       </div>
-
       <div className="table-container">
         <input placeholder="Search Donors..." />
         <table>
@@ -59,14 +59,12 @@ export default function Dashboard() {
           </tbody>
         </table>
       </div>
-
       <div className="activity">
         <h3>Research Activity</h3>
         <p>All queries and exports are logged.</p>
         <hr />
         <h3>Access Status</h3>
         <p>Research Tier Active</p>
-        <button onClick={handleLogout}>Logout</button>
       </div>
     </div>
   );
