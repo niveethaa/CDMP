@@ -202,4 +202,92 @@ router.get("/donations/export", requireAuth, requireResearcher, async (req, res)
   }
 });
 
+// GET /api/research/analytics — aggregated donation analytics for charts
+router.get("/analytics", requireAuth, requireResearcher, async (req, res) => {
+  const { province, party, year, search, riding, donorType } = req.query;
+
+  try {
+    const query = {};
+
+    if (province && province !== "ALL") {
+      query["geography.provinceCode"] = province.toUpperCase();
+    }
+
+    if (party && party !== "ALL") {
+      query["party.code"] = party.toUpperCase();
+    }
+
+    if (year && year !== "ALL") {
+      query["source.year"] = Number(year);
+    }
+
+    if (search && search.trim()) {
+      query["donor.donorDisplayName"] = { $regex: search.trim(), $options: "i" };
+    }
+
+    if (riding && riding.trim()) {
+      query["geography.ridingName"] = { $regex: riding.trim(), $options: "i" };
+    }
+
+    if (donorType && donorType !== "ALL") {
+      if (donorType === "individuals") {
+        query["donor.donorType"] = {
+          $in: ["Individuals", "Individuals -- after December 31,2006"],
+        };
+      } else if (donorType === "organizations") {
+        query["donor.donorType"] = {
+          $in: ["Corporations", "Corporations -- prior to 2007", "Associations", "Trade unions"],
+        };
+      }
+    }
+
+    const [topRidings, amountDistribution] = await Promise.all([
+      Donation.aggregate([
+        { $match: query },
+        {
+          $match: {
+            "geography.ridingName": { $exists: true, $ne: "" },
+          },
+        },
+        {
+          $group: {
+            _id: "$geography.ridingName",
+            donationCount: { $sum: 1 },
+            totalDonations: { $sum: "$contribution.amountTotal" },
+          },
+        },
+        { $sort: { donationCount: -1 } },
+        { $limit: 5 },
+      ]).allowDiskUse(true),
+
+      Donation.aggregate([
+        { $match: query },
+        {
+          $bucket: {
+            groupBy: "$contribution.amountTotal",
+            boundaries: [0, 50, 100, 250, 500, 1000, 5000, 10000],
+            default: "10000+",
+            output: {
+              count: { $sum: 1 },
+              total: { $sum: "$contribution.amountTotal" },
+            },
+          },
+        },
+      ]).allowDiskUse(true),
+    ]);
+
+    await ActivityLog.create({
+      user: req.user.userId,
+      email: req.user.email,
+      action: "query",
+      filters: { province, party, year, search, riding, donorType },
+    });
+
+    res.json({ topRidings, amountDistribution });
+  } catch (error) {
+    console.error("GET /api/research/analytics error:", error.message);
+    res.status(500).json({ message: "Failed to fetch analytics." });
+  }
+});
+
 module.exports = router;

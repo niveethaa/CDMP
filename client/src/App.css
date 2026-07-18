@@ -1147,11 +1147,12 @@ body {
 .dashboard tr:hover td { background: #131625; }
 
 .dashboard .activity {
-  width: 220px;
+  width: 300px;
   background: #0d0f1a;
   border-left: 1px solid #1e2235;
   padding: 20px;
   flex-shrink: 0;
+  overflow-y: auto;
 }
 
 .dashboard .activity h3 {
@@ -1672,4 +1673,28 @@ body {
     bottom: 92px;
     right: 16px;
   }
+}
+
+.map-preview-btn {
+  margin-top: 16px;
+  width: 100%;
+  height: 60px;
+  background: linear-gradient(rgba(13, 15, 26, 0.3), rgba(13, 15, 26, 0.3)), url('/map-preview.png');
+  background-size: cover;
+  background-position: center;
+  border: 1px solid #2e3550;
+  color: #f1f5f9;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.map-preview-btn:hover {
+  opacity: 0.9;
 }

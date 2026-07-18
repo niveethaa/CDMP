@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/config";
+import DonationAnalytics from "./DonationAnalytics";
 
 const DONOR_TYPES = [
   { code: "ALL", name: "All Types" },
@@ -46,6 +47,8 @@ export default function Dashboard() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   const [donorType, setDonorType] = useState("ALL");
   const [province, setProvince] = useState("ALL");
@@ -100,9 +103,37 @@ export default function Dashboard() {
     }
   }, [token]);
 
+  const fetchAnalytics = useCallback(async (filters) => {
+    setAnalyticsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        donorType: filters.donorType,
+        province: filters.province,
+        party: filters.party,
+        year: filters.year,
+        riding: filters.riding,
+        search: filters.search,
+      });
+
+      const res = await fetch(`${API_BASE}/research/analytics?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setAnalytics(data);
+    } catch (err) {
+      console.error("Failed to fetch analytics:", err.message);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchDonations(appliedFilters, page);
-  }, [appliedFilters, page, fetchDonations]);
+    fetchAnalytics(appliedFilters);
+  }, [appliedFilters, page, fetchDonations, fetchAnalytics]);
 
   function handleApplyFilters() {
     setPage(1);
@@ -219,6 +250,7 @@ export default function Dashboard() {
         <button onClick={handleApplyFilters}>Apply Filters</button>
         <button onClick={handleClearFilters}>Clear Filters</button>
         <button onClick={handleExportCSV}>Export CSV</button>
+        <button onClick={() => navigate("/account")}>My Account</button>
       </div>
 
       <div className="table-container" style={{ paddingBottom: "60px" }}>
@@ -295,17 +327,29 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
-
       <div className="activity">
         <h3>Research Activity</h3>
-        <p>All queries and exports are logged.</p>
+          <p>All queries and exports are logged.</p>
         <hr />
         <h3>Access Status</h3>
         <p>Research Tier Active</p>
         <p style={{ color: "#64748b", fontSize: 13, marginTop: 8 }}>
           {total.toLocaleString()} records match current filters
         </p>
-        <button onClick={handleLogout} style={{ marginTop: 16, width: "100%", padding: "9px", background: "#1e2235", border: "1px solid #2e3550", color: "#94a3b8", borderRadius: "8px", cursor: "pointer" }}>
+        <button className="map-preview-btn" onClick={() => navigate("/")}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+            <line x1="9" y1="3" x2="9" y2="18" />
+            <line x1="15" y1="6" x2="15" y2="21" />
+          </svg>
+          View Public Map
+        </button>
+        {analyticsLoading ? (
+          <p style={{ color: "#64748b", fontSize: 13, marginTop: 16 }}>Loading charts...</p>
+        ) : (
+          <DonationAnalytics analytics={analytics} />
+        )}
+        <button onClick={handleLogout} style={{ marginTop: 8, width: "100%", padding: "9px", background: "#1e2235", border: "1px solid #2e3550", color: "#94a3b8", borderRadius: "8px", cursor: "pointer" }}>
           Logout
         </button>
       </div>

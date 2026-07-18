@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import PrivacyAgreement from "./pages/PrivacyAgreement";
 import Dashboard from "./pages/Dashboard";
 import AccessDenied from "./pages/AccessDenied";
+import Account from "./pages/Account";
 import ErrorBoundary from "./components/ErrorBoundaryComponent";
 import "./App.css";
 
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/privacy" element={<PrivacyAgreement />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/access-denied" element={<AccessDenied />} />
+          <Route path="/account" element={<Account />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
