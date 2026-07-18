@@ -1,11 +1,21 @@
 ## Project Overview
 
-## Docker Setup
+## Docker and Data Handoff
 
 For local Docker setup, MongoDB dump restore, and full data rebuild
 instructions, see [DOCKER.md](./DOCKER.md). Large raw and generated data files
 are intentionally kept out of GitHub; see [DATA_README.md](./DATA_README.md)
 for the expected external data package layout.
+
+The current handoff package is:
+
+```text
+course-project-nacss-drive-upload-2026-07-10.zip
+```
+
+Use the Mongo dump restore path for grading or demos. Use the full rebuild path
+only when validating the raw donation, PCFRF postal-riding, and riding GeoJSON
+pipelines end to end.
 
 ## Description
 

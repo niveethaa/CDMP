@@ -6,6 +6,8 @@ const { requireAuth, requireResearcher } = require("../middleware/auth.middlewar
 const router = express.Router();
 
 function buildDonorName(donor) {
+  if (donor.donorDisplayName) return donor.donorDisplayName;
+
   const parts = [
     donor.donorFirstName || "",
     donor.donorMiddleName || "",
@@ -73,7 +75,20 @@ router.get("/donations", requireAuth, requireResearcher, async (req, res) => {
         };
       } else if (donorType === "organizations") {
         query["donor.donorType"] = {
-          $in: ["Corporations", "Corporations -- prior to 2007", "Associations", "Trade unions"],
+          $in: [
+            "Associations",
+            "Businesses / Commercial organizations",
+            "Corporations",
+            "Corporations -- prior to 2007",
+            "Corporations without share capital",
+            "Governments",
+            "Other organizations",
+            "Political organizations other than registered parties",
+            "Registered parties",
+            "Syndicats",
+            "Trade unions",
+            "Unincorporated organizations or associations",
+          ],
         };
       }
     }
@@ -144,7 +159,20 @@ router.get("/donations/export", requireAuth, requireResearcher, async (req, res)
         };
       } else if (donorType === "organizations") {
         query["donor.donorType"] = {
-          $in: ["Corporations", "Corporations -- prior to 2007", "Associations", "Trade unions"],
+          $in: [
+            "Associations",
+            "Businesses / Commercial organizations",
+            "Corporations",
+            "Corporations -- prior to 2007",
+            "Corporations without share capital",
+            "Governments",
+            "Other organizations",
+            "Political organizations other than registered parties",
+            "Registered parties",
+            "Syndicats",
+            "Trade unions",
+            "Unincorporated organizations or associations",
+          ],
         };
       }
     }

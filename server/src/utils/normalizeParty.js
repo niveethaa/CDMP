@@ -6,7 +6,11 @@ function normalizeParty(value) {
 
   if (lowerName.includes("liberal")) {
     code = "LPC";
-  } else if (lowerName.includes("conservative")) {
+  } else if (
+    lowerName.includes("conservative") ||
+    lowerName.includes("reform") ||
+    lowerName.includes("alliance")
+  ) {
     code = "CPC";
   } else if (
     lowerName.includes("new democratic") ||

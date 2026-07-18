@@ -8,7 +8,7 @@ const Donation = require("../models/Donation");
 const Region = require("../models/Region");
 const RegionStat = require("../models/RegionStat");
 
-const DEFAULT_BEGINNING_YEAR = 2004;
+const DEFAULT_BEGINNING_YEAR = 1993;
 const DEFAULT_ENDING_YEAR = 2024;
 
 const PARTY_CODE = "ALL";

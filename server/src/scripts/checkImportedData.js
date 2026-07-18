@@ -66,6 +66,31 @@ async function checkImportedData() {
     console.log("Donation riding assignments:", donationRidingAssignmentCount);
     console.log("Reference data batches:", referenceDataBatchCount);
 
+    const donationEraSummary = await Donation.aggregate([
+      {
+        $group: {
+          _id: "$source.dataEra",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: {
+          _id: 1,
+        },
+      },
+    ]);
+
+    console.log("\nDonation Records by Data Era");
+    console.log("----------------------------");
+
+    if (donationEraSummary.length === 0) {
+      console.log("No donation records found.");
+    } else {
+      for (const item of donationEraSummary) {
+        console.log(`${item._id || "unknown"}: ${item.count}`);
+      }
+    }
+
     const boundarySets = await BoundarySet.find()
       .sort({ validFromYear: 1 })
       .select("code name validFromYear validToYear active")
