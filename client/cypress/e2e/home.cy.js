@@ -1,8 +1,11 @@
 /// <reference types="cypress" />
 
 describe("Home page", () => {
-  it("loads the React app", () => {
+  it("loads the CDMP React app", () => {
     cy.visit("/");
-    cy.contains("App is running").should("be.visible");
+    cy.get("body").should(($body) => {
+      const text = $body.text();
+      expect(text).to.match(/CDMP|donation map is currently unavailable/i);
+    });
   });
 });

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE } from "../api/config";
 
 export default function PrivacyAgreement() {
   const [agree, setAgree] = useState(false);
@@ -13,7 +14,7 @@ export default function PrivacyAgreement() {
 
     const token = localStorage.getItem("token");
 
-    const response = await fetch("http://localhost:5001/api/auth/agree-privacy", {
+    const response = await fetch(`${API_BASE}/auth/agree-privacy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -41,13 +42,23 @@ export default function PrivacyAgreement() {
         </p>
         <label>
           <input
-            type="checkbox"
-            checked={agree}
-            onChange={() => setAgree(!agree)}
+            type="radio"
+            name="privacy"
+            checked={agree=== true}
+            onChange={() => setAgree(true)}
           />
           {" "}I agree to the privacy policy.
         </label>
         <br />
+        <label>
+          <input
+            type="radio"
+            name="privacy"
+            checked={agree === false}
+            onChange={() => setAgree(false)}
+          />
+          {" "}I do not agree.
+        </label>
         <button onClick={handleAgree}>Continue</button>
       </div>
     </div>

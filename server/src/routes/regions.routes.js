@@ -3,14 +3,15 @@ const {
   getAllProvinceStats,
   getNationalStats,
   getRegionStats,
+  getRidingStatsForProvince,
 } = require("../services/regionStats.service");
 
 const router = express.Router();
 
-// GET /api/regions/national  — national summary
+// GET /api/regions/national?partyCode=ALL&beginningYear=1993&endingYear=2024&metricMode=total
 router.get("/national", async (req, res) => {
   try {
-    const stats = await getNationalStats();
+    const stats = await getNationalStats(req.query);
     if (!stats) {
       return res.status(404).json({ message: "National stats not found." });
     }
@@ -21,10 +22,10 @@ router.get("/national", async (req, res) => {
   }
 });
 
-// GET /api/regions/provinces  — all provinces (for the map)
+// GET /api/regions/provinces?partyCode=ALL&beginningYear=1993&endingYear=2024&metricMode=total
 router.get("/provinces", async (req, res) => {
   try {
-    const stats = await getAllProvinceStats();
+    const stats = await getAllProvinceStats(req.query);
     res.json(stats);
   } catch (error) {
     console.error("GET /api/regions/provinces error:", error.message);
@@ -32,7 +33,23 @@ router.get("/provinces", async (req, res) => {
   }
 });
 
-// GET /api/regions/:level/:code  — e.g. /api/regions/province/ON
+// GET /api/regions/ridings/:provinceCode?boundarySet=federal_ridings_2013&partyCode=ALL&beginningYear=2015&endingYear=2024&metricMode=total
+router.get("/ridings/:provinceCode", async (req, res) => {
+  const { provinceCode } = req.params;
+
+  try {
+    const stats = await getRidingStatsForProvince(provinceCode, req.query);
+    res.json(stats);
+  } catch (error) {
+    console.error(
+      `GET /api/regions/ridings/${provinceCode} error:`,
+      error.message,
+    );
+    res.status(500).json({ message: "Failed to load riding stats." });
+  }
+});
+
+// GET /api/regions/:level/:code?partyCode=ALL&beginningYear=1993&endingYear=2024&metricMode=total&boundarySet=federal_ridings_2013
 router.get("/:level/:code", async (req, res) => {
   const { level, code } = req.params;
   const validLevels = ["national", "province", "riding"];
@@ -42,7 +59,7 @@ router.get("/:level/:code", async (req, res) => {
   }
 
   try {
-    const stats = await getRegionStats(level, code);
+    const stats = await getRegionStats(level, code, req.query);
     if (!stats) {
       return res
         .status(404)
