@@ -49,6 +49,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState(false);
   const [exportError, setExportError] = useState("");
 
   const [donorType, setDonorType] = useState("ALL");
@@ -120,12 +121,17 @@ export default function Dashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        setAnalyticsError(true);
+        return;
+      }
 
       const data = await res.json();
       setAnalytics(data);
+      setAnalyticsError(false);
     } catch (err) {
       console.error("Failed to fetch analytics:", err.message);
+      setAnalyticsError(true);
     } finally {
       setAnalyticsLoading(false);
     }
@@ -360,6 +366,8 @@ export default function Dashboard() {
         </button>
         {analyticsLoading ? (
           <p style={{ color: "#64748b", fontSize: 13, marginTop: 16 }}>Loading charts...</p>
+        ) : analyticsError ? (
+          <p style={{ color: "#64748b", fontSize: 13, marginTop: 16 }}>Charts are unavailable right now.</p>
         ) : (
           <DonationAnalytics analytics={analytics} />
         )}
