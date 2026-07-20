@@ -189,6 +189,23 @@ CYPRESS_BASE_URL=http://localhost:5173 npx cypress run
 - **End-to-end:** national map load, province-to-riding drilldown, boundary-bucket switching, filters (party/year/metric/boundary), search (national and riding views), the 2025-onward no-data state, back-to-national navigation, research login, and the full researcher happy-path
 
 
+## Handled Warnings and Exception States
+
+The app degrades gracefully instead of crashing or showing blank screens. Handled exception states:
+
+- **Donation map unavailable** — full-screen message when national/province stats fail to load
+- **Riding boundaries/stats unavailable** — the riding still opens with a no-data message explaining aggregation hasn't been run
+- **2025-onward boundary** — no-data banner (donation data not yet available for that time frame)
+- **Search with no matches** — "No Regions Found" / "No Ridings Found"
+- **Filtered records return nothing** — "No records found for the current filters" empty-state row
+- **Records fail to load** — inline error message on the research dashboard
+- **CSV export fails** — inline warning near the Export button ("Export failed. Please try again…")
+- **Login authentication fails** — error message shown to the user
+- **Not authorized (non-researcher)** — 403 response and Access Denied page
+- **Privacy agreement not accepted** — user is prompted to agree before continuing
+
+Warnings use plain, non-technical language and do not block map controls, filters, search, or navigation.
+
 ## Setup
 
 The user needs to navigate to `/login` and then `/register` where they register their university email (`.ca` or `.edu`) and password. Then the user is sent back to the login page to login.
