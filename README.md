@@ -203,6 +203,7 @@ The app degrades gracefully instead of crashing or showing blank screens. Handle
 - **Login authentication fails** — error message shown to the user
 - **Not authorized (non-researcher)** — 403 response and Access Denied page
 - **Privacy agreement not accepted** — user is prompted to agree before continuing
+- **Analytics charts unavailable**
 
 Warnings use plain, non-technical language and do not block map controls, filters, search, or navigation.
 
