@@ -49,6 +49,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [exportError, setExportError] = useState("");
 
   const [donorType, setDonorType] = useState("ALL");
   const [province, setProvince] = useState("ALL");
@@ -164,6 +165,7 @@ export default function Dashboard() {
   }
 
   async function handleExportCSV() {
+    setExportError("");
     const params = new URLSearchParams({
       donorType: appliedFilters.donorType,
       province: appliedFilters.province,
@@ -173,19 +175,26 @@ export default function Dashboard() {
       search: appliedFilters.search,
     });
 
-    const res = await fetch(`${API_BASE}/research/donations/export?${params}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      const res = await fetch(`${API_BASE}/research/donations/export?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    if (!res.ok) return;
+      if (!res.ok) {
+        setExportError("Export failed. Please try again in a moment.");
+        return;
+      }
 
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "donations.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "donations.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError("Export failed. Please check your connection and try again.");
+    }
   }
 
   function formatDonorName(donor) {
@@ -250,6 +259,11 @@ export default function Dashboard() {
         <button onClick={handleApplyFilters}>Apply Filters</button>
         <button onClick={handleClearFilters}>Clear Filters</button>
         <button onClick={handleExportCSV}>Export CSV</button>
+        {exportError && (
+          <p className="export-error" role="alert" style={{ color: "#f87171", fontSize: 13, marginTop: 4 }}>
+            {exportError}
+          </p>
+        )}
         <button onClick={() => navigate("/account")}>My Account</button>
       </div>
 
