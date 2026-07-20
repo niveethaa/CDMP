@@ -79,6 +79,7 @@ Authenticated Research Users Main Screen:
 
 ## Software Releases
 - [Version 0.1.0](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/wiki/Version-0.1.0-Release) - July 9, 2026
+- [Version 0.2.0](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/releases/tag/v0.2.0) - July 20, 2026
 
 ## Meeting Minutes
 **Demo Meeting Notes**
