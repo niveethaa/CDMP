@@ -140,6 +140,73 @@ npm test -- --watch=false
 
 Authenticated university researchers can access individual-level donation records through a secure login. To get access a user needs to register their university email and accept the privacy agreement.
 
+## Running Tests
+
+The project has three test suites: backend (Jest + Supertest), frontend unit (Jest), and end-to-end (Cypress). Backend and frontend unit tests mock their dependencies, so they need no database or running server.
+
+### Backend tests (Jest + Supertest)
+
+```bash
+cd server
+npm test
+```
+
+Covers the region statistics endpoints (national/province/riding), research access control, authentication (login, account info, change password), and the analytics endpoint. The database is mocked, so no MongoDB connection is required.
+
+### Frontend unit tests (Jest)
+
+```bash
+cd client
+npm test
+```
+
+Covers the client API layer (region and auth functions) — URL building, query parameters, and error handling. `fetch` is mocked, so no running server is required.
+
+### End-to-end tests (Cypress)
+
+E2E tests run against the live application, so the app must be running via Docker on `http://localhost:8080` first:
+
+```bash
+# from the project root
+docker compose up -d
+
+cd client
+npx cypress run          # run all specs headlessly
+# or
+npx cypress open         # interactive mode
+```
+
+Cypress defaults to `http://localhost:8080` (the Docker port). To run against a local dev server on port 5173 instead:
+
+```bash
+CYPRESS_BASE_URL=http://localhost:5173 npx cypress run
+```
+
+### What the tests cover
+
+- **Backend API:** region stats (national/province/riding), query parameters, invalid region codes, research access control (401/403), CSV export, auth routes, analytics
+- **Frontend unit:** region and auth API clients
+- **End-to-end:** national map load, province-to-riding drilldown, boundary-bucket switching, filters (party/year/metric/boundary), search (national and riding views), the 2025-onward no-data state, back-to-national navigation, research login, and the full researcher happy-path
+
+
+## Handled Warnings and Exception States
+
+The app degrades gracefully instead of crashing or showing blank screens. Handled exception states:
+
+- **Donation map unavailable** — full-screen message when national/province stats fail to load
+- **Riding boundaries/stats unavailable** — the riding still opens with a no-data message explaining aggregation hasn't been run
+- **2025-onward boundary** — no-data banner (donation data not yet available for that time frame)
+- **Search with no matches** — "No Regions Found" / "No Ridings Found"
+- **Filtered records return nothing** — "No records found for the current filters" empty-state row
+- **Records fail to load** — inline error message on the research dashboard
+- **CSV export fails** — inline warning near the Export button ("Export failed. Please try again…")
+- **Login authentication fails** — error message shown to the user
+- **Not authorized (non-researcher)** — 403 response and Access Denied page
+- **Privacy agreement not accepted** — user is prompted to agree before continuing
+- **Analytics charts unavailable**
+
+Warnings use plain, non-technical language and do not block map controls, filters, search, or navigation.
+
 ## Setup
 
 The user needs to navigate to `/login` and then `/register` where they register their university email (`.ca` or `.edu`) and password. Then the user is sent back to the login page to login.
