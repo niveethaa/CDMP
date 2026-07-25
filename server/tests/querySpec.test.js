@@ -136,12 +136,23 @@ describe("QuerySpec validation", () => {
     ).toThrow("Province rankings must use regionLevel province");
   });
 
-  it("requires a regionCode for non-ranking province queries", () => {
+  it("accepts provinceCode as the province identifier", () => {
+    expect(
+      validateQuerySpec(
+        validSummary({ regionCode: null, provinceCode: "on" }),
+      ),
+    ).toMatchObject({
+      regionCode: "ON",
+      provinceCode: "ON",
+    });
+  });
+
+  it("requires a province code for non-ranking province queries", () => {
     expect(() =>
       validateQuerySpec(
         validSummary({ regionCode: null, provinceCode: null }),
       ),
-    ).toThrow("Province queries require a regionCode");
+    ).toThrow("Province queries require a province code");
   });
 
   it("requires compatible riding ranking fields", () => {

@@ -1,6 +1,5 @@
 const {
   AskDataInterpreterError,
-  createModelProvider,
   interpretQuestion,
   sanitizeMapFilters,
 } = require("../src/services/askDataInterpreter.service");
@@ -122,70 +121,6 @@ describe("Ask Data natural-language interpreter", () => {
       ),
     ).rejects.toMatchObject({
       code: "INVALID_MODEL_QUERY_SPEC",
-    });
-  });
-
-  it("reports missing provider configuration without making a request", () => {
-    expect(() =>
-      createModelProvider({
-        env: {},
-        fetchImpl: jest.fn(),
-      }),
-    ).toThrow(
-      expect.objectContaining({
-        code: "MISSING_CONFIGURATION",
-      }),
-    );
-  });
-
-  it("converts provider failures into controlled errors", async () => {
-    const fetchImpl = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-    });
-    const provider = createModelProvider({
-      env: {
-        AI_API_KEY: "test-key",
-        AI_MODEL: "test-model",
-        AI_BASE_URL: "https://model.example/v1",
-      },
-      fetchImpl,
-    });
-
-    await expect(
-      provider.generateJson({
-        systemPrompt: "system",
-        userPrompt: "user",
-      }),
-    ).rejects.toMatchObject({
-      code: "PROVIDER_ERROR",
-    });
-    expect(fetchImpl).toHaveBeenCalledWith(
-      "https://model.example/v1/chat/completions",
-      expect.objectContaining({ method: "POST" }),
-    );
-  });
-
-  it("converts provider timeouts into controlled errors", async () => {
-    const timeoutError = new Error("aborted");
-    timeoutError.name = "AbortError";
-    const provider = createModelProvider({
-      env: {
-        AI_API_KEY: "test-key",
-        AI_MODEL: "test-model",
-        AI_BASE_URL: "https://model.example/v1",
-        AI_REQUEST_TIMEOUT_MS: "10",
-      },
-      fetchImpl: jest.fn().mockRejectedValue(timeoutError),
-    });
-
-    await expect(
-      provider.generateJson({
-        systemPrompt: "system",
-        userPrompt: "user",
-      }),
-    ).rejects.toMatchObject({
-      code: "PROVIDER_TIMEOUT",
     });
   });
 

@@ -204,6 +204,7 @@ function validateQuerySpec(input) {
     if (regionCode && provinceCode && regionCode !== provinceCode) {
       errors.push("regionCode and provinceCode must identify the same province.");
     }
+    regionCode = regionCode || provinceCode;
     provinceCode = provinceCode || regionCode;
   }
 
@@ -254,7 +255,7 @@ function validateQuerySpec(input) {
     regionCode = null;
     provinceCode = null;
   } else if (regionLevel === "province" && !regionCode) {
-    errors.push("Province queries require a regionCode.");
+    errors.push("Province queries require a province code.");
   }
   if (intent === "ranking" && groupBy === "riding") {
     if (regionLevel !== "riding") {

@@ -12,6 +12,9 @@ const {
   SUPPORTED_REGION_LEVELS,
   validateQuerySpec,
 } = require("./querySpec.service");
+const {
+  createAIProvider,
+} = require("./aiProviders/providerFactory");
 
 const SAFE_MAP_FILTERS = [
   "partyCode",
@@ -23,6 +26,83 @@ const SAFE_MAP_FILTERS = [
   "provinceCode",
   "boundarySet",
 ];
+
+const MODEL_OUTPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    supported: { type: "boolean" },
+    querySpec: {
+      anyOf: [
+        {
+          type: "object",
+          properties: {
+            intent: { type: "string", enum: SUPPORTED_INTENTS },
+            metric: { type: "string", enum: SUPPORTED_METRICS },
+            groupBy: {
+              anyOf: [
+                {
+                  type: "string",
+                  enum: SUPPORTED_GROUPS.filter(Boolean),
+                },
+                { type: "null" },
+              ],
+            },
+            partyCodes: {
+              type: "array",
+              items: { type: "string", enum: SUPPORTED_PARTY_CODES },
+              maxItems: 2,
+            },
+            regionLevel: {
+              type: "string",
+              enum: SUPPORTED_REGION_LEVELS,
+            },
+            regionCode: {
+              anyOf: [{ type: "string" }, { type: "null" }],
+            },
+            provinceCode: {
+              anyOf: [
+                {
+                  type: "string",
+                  enum: SUPPORTED_PROVINCE_CODES,
+                },
+                { type: "null" },
+              ],
+            },
+            beginningYear: {
+              type: "integer",
+              minimum: DATA_BEGINNING_YEAR,
+              maximum: DATA_ENDING_YEAR,
+            },
+            endingYear: {
+              type: "integer",
+              minimum: DATA_BEGINNING_YEAR,
+              maximum: DATA_ENDING_YEAR,
+            },
+            boundarySet: {
+              anyOf: [
+                {
+                  type: "string",
+                  enum: Object.keys(RIDING_BOUNDARY_SETS),
+                },
+                { type: "null" },
+              ],
+            },
+            limit: {
+              type: "integer",
+              minimum: 1,
+              maximum: 5,
+            },
+          },
+          required: ALLOWED_FIELDS,
+          additionalProperties: false,
+        },
+        { type: "null" },
+      ],
+    },
+  },
+  required: ["supported", "querySpec"],
+  additionalProperties: false,
+};
 
 class AskDataInterpreterError extends Error {
   constructor(code, message) {
@@ -101,91 +181,6 @@ function parseModelOutput(rawOutput) {
   }
 }
 
-function createModelProvider({
-  env = process.env,
-  fetchImpl = globalThis.fetch,
-} = {}) {
-  const apiKey = env.AI_API_KEY;
-  const model = env.AI_MODEL;
-  const baseUrl = env.AI_BASE_URL;
-  const parsedTimeout = Number.parseInt(env.AI_REQUEST_TIMEOUT_MS, 10);
-  const timeoutMs =
-    Number.isInteger(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : 15000;
-
-  if (!apiKey || !model || !baseUrl) {
-    throw new AskDataInterpreterError(
-      "MISSING_CONFIGURATION",
-      "Ask CDMP model configuration is incomplete.",
-    );
-  }
-  if (typeof fetchImpl !== "function") {
-    throw new AskDataInterpreterError(
-      "MISSING_CONFIGURATION",
-      "No HTTP client is available for the Ask CDMP model provider.",
-    );
-  }
-
-  const endpoint = `${String(baseUrl).replace(/\/$/, "")}/chat/completions`;
-
-  return {
-    async generateJson({ systemPrompt, userPrompt }) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-      try {
-        const response = await fetchImpl(endpoint, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0,
-          }),
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new AskDataInterpreterError(
-            "PROVIDER_ERROR",
-            "The Ask CDMP model provider could not process the request.",
-          );
-        }
-
-        const body = await response.json();
-        const content = body?.choices?.[0]?.message?.content;
-        if (typeof content !== "string") {
-          throw new AskDataInterpreterError(
-            "MALFORMED_MODEL_RESPONSE",
-            "The model returned an invalid response.",
-          );
-        }
-        return content;
-      } catch (error) {
-        if (error?.name === "AbortError") {
-          throw new AskDataInterpreterError(
-            "PROVIDER_TIMEOUT",
-            "The Ask CDMP model request timed out.",
-          );
-        }
-        if (error instanceof AskDataInterpreterError) throw error;
-        throw new AskDataInterpreterError(
-          "PROVIDER_ERROR",
-          "The Ask CDMP model provider is unavailable.",
-        );
-      } finally {
-        clearTimeout(timeout);
-      }
-    },
-  };
-}
-
 async function interpretQuestion(
   { question, currentFilters = null, previousQuery = null },
   { provider } = {},
@@ -209,7 +204,7 @@ async function interpretQuestion(
     }
   }
 
-  const activeProvider = provider || createModelProvider();
+  const activeProvider = provider || createAIProvider();
   const rawOutput = await activeProvider.generateJson({
     systemPrompt: buildSystemPrompt(),
     userPrompt: buildUserPrompt(
@@ -217,6 +212,7 @@ async function interpretQuestion(
       currentFilters,
       normalizedPreviousQuery,
     ),
+    jsonSchema: MODEL_OUTPUT_SCHEMA,
   });
   const output = parseModelOutput(rawOutput);
 
@@ -251,8 +247,8 @@ async function interpretQuestion(
 
 module.exports = {
   AskDataInterpreterError,
+  MODEL_OUTPUT_SCHEMA,
   buildSystemPrompt,
-  createModelProvider,
   interpretQuestion,
   sanitizeMapFilters,
 };
