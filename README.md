@@ -85,7 +85,7 @@ Authenticated Research Users Main Screen:
 **Demo Meeting Notes**
 - [Demo Meeting 1](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/36f78ac6754a0a04fe5f392c9493f94a71361405/meeting_minutes/demo_meeting_minutes/Demo_Meeting_Notes_Template.pdf)
 - [Demo Meeting 2](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/c649adaadb4781ee36d142a12efb27eaf79b4acc/meeting_minutes/demo_meeting_minutes/Demo2_Meeting_Notes.pdf)
-
+- [Demo Meeting 3](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/f27e11440313f0963f1ea707940c60dbd32bc527/meeting_minutes/demo_meeting_minutes/Demo3_Meeting_Notes.pdf)
 
 **Standup Meeting Notes**
 - [Standup Meeting May 23 - May 21](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/2bf47786fab6db0c04cd764defef6ed6fef8bc2c/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_May23-May31.pdf)
