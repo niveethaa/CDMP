@@ -22,7 +22,7 @@ export default function Account() {
         setEmail(data.email);
         setRole(data.role);
         setCreatedAt(new Date(data.createdAt).toLocaleDateString());
-      } catch (err) {
+      } catch {
         navigate("/login");
       } finally {
         setLoading(false);

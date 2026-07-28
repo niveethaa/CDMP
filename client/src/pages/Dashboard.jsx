@@ -36,7 +36,8 @@ const PARTIES = [
   { code: "PPC", name: "People's" },
 ];
 
-const YEARS = ["ALL", ...Array.from({ length: 21 }, (_, i) => String(2004 + i))];
+// Merged donation coverage runs 1993-2024 (32 years).
+const YEARS = ["ALL", ...Array.from({ length: 32 }, (_, i) => String(1993 + i))];
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -137,10 +138,18 @@ export default function Dashboard() {
     }
   }, [token]);
 
+  // The records table depends on both the applied filters and the page number.
   useEffect(() => {
     fetchDonations(appliedFilters, page);
+  }, [appliedFilters, page, fetchDonations]);
+
+  // Analytics aggregate the full filtered result set, so they only need to
+  // rerun when the filters change — not on every pagination click. Running
+  // them per page triggered two large aggregations over ~5.3M records each
+  // time the user paged through the table.
+  useEffect(() => {
     fetchAnalytics(appliedFilters);
-  }, [appliedFilters, page, fetchDonations, fetchAnalytics]);
+  }, [appliedFilters, fetchAnalytics]);
 
   function handleApplyFilters() {
     setPage(1);
@@ -198,7 +207,7 @@ export default function Dashboard() {
       a.download = "donations.csv";
       a.click();
       URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch {
       setExportError("Export failed. Please check your connection and try again.");
     }
   }

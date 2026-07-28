@@ -16,8 +16,19 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Email and password are required." });
     }
 
-    if (!email.endsWith(".ca") && !email.endsWith(".edu")) {
+    // University of Toronto addresses only. This matches any subdomain of
+    // utoronto.ca (e.g. utoronto.ca, mail.utoronto.ca, cs.utoronto.ca) but
+    // rejects unrelated .ca / .edu domains.
+    const normalizedEmail = email.trim().toLowerCase();
+    if (
+      !normalizedEmail.endsWith("@utoronto.ca") &&
+      !normalizedEmail.endsWith(".utoronto.ca")
+    ) {
       return res.status(403).json({ message: "Only University of Toronto email addresses are allowed." });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters." });
     }
 
     const existing = await User.findOne({ email });
@@ -86,6 +97,12 @@ router.post("/login", async (req, res) => {
 router.post("/agree-privacy", requireAuth, async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.user.userId, { agreedToPrivacyPolicy: true });
+
+    await ActivityLog.create({
+      user: req.user.userId,
+      email: req.user.email,
+      action: "privacy_agreement",
+    });
 
     const token = jwt.sign(
       { userId: req.user.userId, email: req.user.email, role: req.user.role },

@@ -5,6 +5,66 @@ const { requireAuth, requireResearcher } = require("../middleware/auth.middlewar
 
 const router = express.Router();
 
+// Donor-type groupings shared by the records, export, and analytics routes so
+// that all three always filter on exactly the same set of categories. Keeping
+// these in one place prevents the table, CSV export, and charts from
+// disagreeing about what counts as an "organization".
+const INDIVIDUAL_DONOR_TYPES = [
+  "Individuals",
+  "Individuals -- after December 31,2006",
+];
+
+const ORGANIZATION_DONOR_TYPES = [
+  "Associations",
+  "Businesses / Commercial organizations",
+  "Corporations",
+  "Corporations -- prior to 2007",
+  "Corporations without share capital",
+  "Governments",
+  "Other organizations",
+  "Political organizations other than registered parties",
+  "Registered parties",
+  "Syndicats",
+  "Trade unions",
+  "Unincorporated organizations or associations",
+];
+
+// Builds the MongoDB query object from the shared set of request filters.
+// Used identically by /donations, /donations/export, and /analytics.
+function buildDonationQuery({ province, party, year, search, riding, donorType }) {
+  const query = {};
+
+  if (province && province !== "ALL") {
+    query["geography.provinceCode"] = province.toUpperCase();
+  }
+
+  if (party && party !== "ALL") {
+    query["party.code"] = party.toUpperCase();
+  }
+
+  if (year && year !== "ALL") {
+    query["source.year"] = Number(year);
+  }
+
+  if (search && search.trim()) {
+    query["donor.donorDisplayName"] = { $regex: search.trim(), $options: "i" };
+  }
+
+  if (riding && riding.trim()) {
+    query["geography.ridingName"] = { $regex: riding.trim(), $options: "i" };
+  }
+
+  if (donorType && donorType !== "ALL") {
+    if (donorType === "individuals") {
+      query["donor.donorType"] = { $in: INDIVIDUAL_DONOR_TYPES };
+    } else if (donorType === "organizations") {
+      query["donor.donorType"] = { $in: ORGANIZATION_DONOR_TYPES };
+    }
+  }
+
+  return query;
+}
+
 function buildDonorName(donor) {
   if (donor.donorDisplayName) return donor.donorDisplayName;
 
@@ -14,6 +74,23 @@ function buildDonorName(donor) {
     donor.donorLastName || "",
   ];
   return parts.filter(Boolean).join(" ");
+}
+
+// Escapes a single CSV field: guards against spreadsheet formula injection
+// (values starting with = + - @ or a control char) and quotes values that
+// contain commas, quotes, or newlines so columns never break.
+function escapeCsvField(value) {
+  let str = value === null || value === undefined ? "" : String(value);
+
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+
+  if (/[",\n\r]/.test(str)) {
+    str = `"${str.replace(/"/g, '""')}"`;
+  }
+
+  return str;
 }
 
 function buildCsvRow(donation) {
@@ -32,7 +109,9 @@ function buildCsvRow(donation) {
   const riding = geography.ridingName || "";
   const province = geography.provinceCode || "";
 
-  return `${donorName},${partyCode},${amount},${date},${postalCode},${riding},${province}`;
+  return [donorName, partyCode, amount, date, postalCode, riding, province]
+    .map(escapeCsvField)
+    .join(",");
 }
 
 function buildCsv(donations) {
@@ -46,52 +125,7 @@ router.get("/donations", requireAuth, requireResearcher, async (req, res) => {
   const { province, party, year, search, riding, donorType, page = 1, limit = 20 } = req.query;
 
   try {
-    const query = {};
-
-    if (province && province !== "ALL") {
-      query["geography.provinceCode"] = province.toUpperCase();
-    }
-
-    if (party && party !== "ALL") {
-      query["party.code"] = party.toUpperCase();
-    }
-
-    if (year && year !== "ALL") {
-      query["source.year"] = Number(year);
-    }
-
-    if (search && search.trim()) {
-      query["donor.donorDisplayName"] = { $regex: search.trim(), $options: "i" };
-    }
-
-    if (riding && riding.trim()) {
-      query["geography.ridingName"] = { $regex: riding.trim(), $options: "i" };
-    }
-
-    if (donorType && donorType !== "ALL") {
-      if (donorType === "individuals") {
-        query["donor.donorType"] = {
-          $in: ["Individuals", "Individuals -- after December 31,2006"],
-        };
-      } else if (donorType === "organizations") {
-        query["donor.donorType"] = {
-          $in: [
-            "Associations",
-            "Businesses / Commercial organizations",
-            "Corporations",
-            "Corporations -- prior to 2007",
-            "Corporations without share capital",
-            "Governments",
-            "Other organizations",
-            "Political organizations other than registered parties",
-            "Registered parties",
-            "Syndicats",
-            "Trade unions",
-            "Unincorporated organizations or associations",
-          ],
-        };
-      }
-    }
+    const query = buildDonationQuery({ province, party, year, search, riding, donorType });
 
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -130,52 +164,7 @@ router.get("/donations/export", requireAuth, requireResearcher, async (req, res)
   const { province, party, year, search, riding, donorType } = req.query;
 
   try {
-    const query = {};
-
-    if (province && province !== "ALL") {
-      query["geography.provinceCode"] = province.toUpperCase();
-    }
-
-    if (party && party !== "ALL") {
-      query["party.code"] = party.toUpperCase();
-    }
-
-    if (year && year !== "ALL") {
-      query["source.year"] = Number(year);
-    }
-
-    if (search && search.trim()) {
-      query["donor.donorDisplayName"] = { $regex: search.trim(), $options: "i" };
-    }
-
-    if (riding && riding.trim()) {
-      query["geography.ridingName"] = { $regex: riding.trim(), $options: "i" };
-    }
-
-    if (donorType && donorType !== "ALL") {
-      if (donorType === "individuals") {
-        query["donor.donorType"] = {
-          $in: ["Individuals", "Individuals -- after December 31,2006"],
-        };
-      } else if (donorType === "organizations") {
-        query["donor.donorType"] = {
-          $in: [
-            "Associations",
-            "Businesses / Commercial organizations",
-            "Corporations",
-            "Corporations -- prior to 2007",
-            "Corporations without share capital",
-            "Governments",
-            "Other organizations",
-            "Political organizations other than registered parties",
-            "Registered parties",
-            "Syndicats",
-            "Trade unions",
-            "Unincorporated organizations or associations",
-          ],
-        };
-      }
-    }
+    const query = buildDonationQuery({ province, party, year, search, riding, donorType });
 
     const donations = await Donation.find(query)
       .select(
@@ -207,39 +196,7 @@ router.get("/analytics", requireAuth, requireResearcher, async (req, res) => {
   const { province, party, year, search, riding, donorType } = req.query;
 
   try {
-    const query = {};
-
-    if (province && province !== "ALL") {
-      query["geography.provinceCode"] = province.toUpperCase();
-    }
-
-    if (party && party !== "ALL") {
-      query["party.code"] = party.toUpperCase();
-    }
-
-    if (year && year !== "ALL") {
-      query["source.year"] = Number(year);
-    }
-
-    if (search && search.trim()) {
-      query["donor.donorDisplayName"] = { $regex: search.trim(), $options: "i" };
-    }
-
-    if (riding && riding.trim()) {
-      query["geography.ridingName"] = { $regex: riding.trim(), $options: "i" };
-    }
-
-    if (donorType && donorType !== "ALL") {
-      if (donorType === "individuals") {
-        query["donor.donorType"] = {
-          $in: ["Individuals", "Individuals -- after December 31,2006"],
-        };
-      } else if (donorType === "organizations") {
-        query["donor.donorType"] = {
-          $in: ["Corporations", "Corporations -- prior to 2007", "Associations", "Trade unions"],
-        };
-      }
-    }
+    const query = buildDonationQuery({ province, party, year, search, riding, donorType });
 
     const [topRidings, amountDistribution] = await Promise.all([
       Donation.aggregate([

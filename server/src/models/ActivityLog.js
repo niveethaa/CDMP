@@ -13,7 +13,7 @@ const activityLogSchema = new mongoose.Schema(
     },
     action: {
       type: String,
-      enum: ["login", "query", "export", "password_change"],
+      enum: ["login", "query", "export", "password_change", "privacy_agreement"],
       required: true,
     },
     filters: {
