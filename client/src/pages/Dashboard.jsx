@@ -135,8 +135,10 @@ export default function Dashboard() {
     }
   }, [token]);
 
-  // The records table depends on both the applied filters and the page number.
-  useEffect(() => {
+   useEffect(() => {
+    // Fetch-on-change: fetchDonations sets a loading flag synchronously, which
+    // is the intended pattern here (same convention as DonationMap.jsx).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDonations(appliedFilters, page);
   }, [appliedFilters, page, fetchDonations]);
 
@@ -145,6 +147,7 @@ export default function Dashboard() {
   // them per page triggered two large aggregations over ~5.3M records each
   // time the user paged through the table.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAnalytics(appliedFilters);
   }, [appliedFilters, fetchAnalytics]);
 
