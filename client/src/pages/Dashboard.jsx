@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/config";
+import { PARTIES } from "../utils/parties";
+import { DATA_MIN_YEAR, DATA_MAX_YEAR } from "../utils/boundarySets";
 import DonationAnalytics from "./DonationAnalytics";
 
 const DONOR_TYPES = [
@@ -26,17 +28,13 @@ const PROVINCES = [
   { code: "YT", name: "Yukon" },
 ];
 
-const PARTIES = [
-  { code: "ALL", name: "All Parties" },
-  { code: "LPC", name: "Liberal" },
-  { code: "CPC", name: "Conservative" },
-  { code: "NDP", name: "NDP" },
-  { code: "BQ", name: "Bloc Québécois" },
-  { code: "GPC", name: "Green" },
-  { code: "PPC", name: "People's" },
+// Merged donation coverage runs from DATA_MIN_YEAR to DATA_MAX_YEAR.
+const YEARS = [
+  "ALL",
+  ...Array.from({ length: DATA_MAX_YEAR - DATA_MIN_YEAR + 1 }, (_, i) =>
+    String(DATA_MIN_YEAR + i),
+  ),
 ];
-
-const YEARS = ["ALL", ...Array.from({ length: 21 }, (_, i) => String(2004 + i))];
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -137,10 +135,21 @@ export default function Dashboard() {
     }
   }, [token]);
 
-  useEffect(() => {
+   useEffect(() => {
+    // Fetch-on-change: fetchDonations sets a loading flag synchronously, which
+    // is the intended pattern here (same convention as DonationMap.jsx).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDonations(appliedFilters, page);
+  }, [appliedFilters, page, fetchDonations]);
+
+  // Analytics aggregate the full filtered result set, so they only need to
+  // rerun when the filters change — not on every pagination click. Running
+  // them per page triggered two large aggregations over ~5.3M records each
+  // time the user paged through the table.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAnalytics(appliedFilters);
-  }, [appliedFilters, page, fetchDonations, fetchAnalytics]);
+  }, [appliedFilters, fetchAnalytics]);
 
   function handleApplyFilters() {
     setPage(1);
@@ -198,7 +207,7 @@ export default function Dashboard() {
       a.download = "donations.csv";
       a.click();
       URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch {
       setExportError("Export failed. Please check your connection and try again.");
     }
   }

@@ -46,7 +46,7 @@ const boundarySets = [
     validToYear: null,
     source: "Federal electoral district boundary/reference data",
     notes:
-      "Boundary set for donation years 2025 onward. Geometry is bundled, but CDMP currently has no donation data beyond 2024.",
+      "Boundary set for donation years 2025 onward. Geometry is not bundled yet, and CDMP currently has no donation data beyond 2024.",
     active: true,
   },
 ];

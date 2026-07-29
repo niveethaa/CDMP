@@ -5,9 +5,9 @@ export const FUTURE_NO_DATA_YEAR = 2025;
 export const BOUNDARY_SETS = [
   {
     code: "federal_ridings_1996",
-    label: "1993–2003 · 1996 Riding Map",
+    label: "1997–2003 · 1996 Riding Map",
     shortLabel: "1996 Map",
-    validFromYear: 1993,
+    validFromYear: 1997,
     validToYear: 2003,
     hasGeoJson: true,
     hasDonationData: true,

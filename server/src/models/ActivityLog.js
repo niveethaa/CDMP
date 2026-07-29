@@ -5,7 +5,9 @@ const activityLogSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      // Optional: a failed login attempt may reference an email that has no
+      // matching user account, so there is no user id to record.
+      required: false,
     },
     email: {
       type: String,
@@ -13,7 +15,14 @@ const activityLogSchema = new mongoose.Schema(
     },
     action: {
       type: String,
-      enum: ["login", "query", "export", "password_change"],
+      enum: [
+        "login",
+        "login_failed",
+        "query",
+        "export",
+        "password_change",
+        "privacy_agreement",
+      ],
       required: true,
     },
     filters: {

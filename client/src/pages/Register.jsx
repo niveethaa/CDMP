@@ -70,12 +70,13 @@ export default function Register() {
         </form>
         <p style={{ marginTop: "16px", fontSize: "13px" }}>
           Already have an account?{" "}
-          <span
+          <button
+            type="button"
+            className="text-link"
             onClick={() => navigate("/login")}
-            style={{ color: "#818cf8", cursor: "pointer" }}
           >
             Log In
-          </span>
+          </button>
         </p>
       </div>
     </div>

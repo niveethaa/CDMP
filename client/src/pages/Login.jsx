@@ -52,12 +52,13 @@ export default function Login() {
         </form>
         <p style={{ marginTop: "16px", fontSize: "13px", textAlign: "center" }}>
           Don't have an account?{" "}
-          <span
+          <button
+            type="button"
+            className="text-link"
             onClick={() => navigate("/register")}
-            style={{ color: "#818cf8", cursor: "pointer" }}
           >
             Sign Up
-          </span>
+          </button>
         </p>
       </div>
     </div>

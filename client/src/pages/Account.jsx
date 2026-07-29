@@ -22,7 +22,7 @@ export default function Account() {
         setEmail(data.email);
         setRole(data.role);
         setCreatedAt(new Date(data.createdAt).toLocaleDateString());
-      } catch (err) {
+      } catch {
         navigate("/login");
       } finally {
         setLoading(false);
@@ -107,12 +107,13 @@ export default function Account() {
         )}
 
         <p style={{ marginTop: "16px", fontSize: "13px", textAlign: "center" }}>
-          <span
+          <button
+            type="button"
+            className="text-link"
             onClick={() => navigate("/dashboard")}
-            style={{ color: "#818cf8", cursor: "pointer" }}
           >
             Back to Dashboard
-          </span>
+          </button>
         </p>
       </div>
     </div>
