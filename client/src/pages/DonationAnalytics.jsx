@@ -1,19 +1,3 @@
-const DONOR_TYPE_COLORS = {
-  "Individuals": "#4361ee",
-  "Corporations": "#f37021",
-  "Trade Unions": "#d71920",
-  "Associations": "#3d9b35",
-  "Governments": "#003da5",
-  "Political Organizations": "#6a0dad",
-  "Other": "#64748b",
-};
-
-function formatDollars(amount) {
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
-  return `$${Number(amount || 0).toFixed(0)}`;
-}
-
 function formatCount(n) {
   return Number(n || 0).toLocaleString("en-CA");
 }

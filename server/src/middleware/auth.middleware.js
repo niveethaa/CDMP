@@ -22,6 +22,14 @@ function requireResearcher(req, res, next) {
   if (req.user.role !== "researcher") {
     return res.status(403).json({ message: "Forbidden." });
   }
+  // A token issued before the user accepted the privacy agreement is only
+  // valid for completing that agreement. It must never reach individual
+  // research records, even though it carries the "researcher" role.
+  if (req.user.requiresPrivacyAgreement) {
+    return res.status(403).json({
+      message: "You must accept the privacy agreement before accessing research data.",
+    });
+  }
   next();
 }
 

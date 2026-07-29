@@ -1,27 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
-
-const PARTY_COLORS = {
-  LPC: "#d71920",
-  CPC: "#1a4782",
-  NDP: "#f37021",
-  BQ: "#003da5",
-  GPC: "#3d9b35",
-  PPC: "#6a0dad",
-  UNKNOWN: "#64748b",
-};
+import { PARTY_COLORS } from "../../utils/partyColors";
+import { formatDollars } from "../../utils/format";
 
 function getDominantParty(partyStats) {
   if (!partyStats || partyStats.length === 0) return null;
   return partyStats.reduce((a, b) =>
     (a.totalDonations || 0) > (b.totalDonations || 0) ? a : b,
   );
-}
-
-function formatDollars(amount) {
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
-  return `$${Number(amount || 0).toFixed(0)}`;
 }
 
 function escapeHtml(value) {

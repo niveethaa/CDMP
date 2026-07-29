@@ -6,6 +6,16 @@ const connectDB = require("./config/db");
 const PORT = process.env.PORT || 5001;
 const HOST = process.env.HOST || "0.0.0.0";
 
+// Fail fast if the JWT secret is missing: without it, token signing/verification
+// would break at request time and surface as confusing 500s instead of a clear
+// configuration error at boot.
+if (!process.env.JWT_SECRET) {
+  console.error(
+    "Missing required environment variable JWT_SECRET. Set it before starting the server.",
+  );
+  process.exit(1);
+}
+
 async function startServer() {
   await connectDB();
 

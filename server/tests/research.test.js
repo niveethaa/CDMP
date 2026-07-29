@@ -136,4 +136,43 @@ describe("Research API access control (UC3)", () => {
       expect(res.body.topRidings[0]._id).toBe("Toronto Centre");
     });
   });
+
+  // Regression tests for the critical privacy-agreement bypass: a token issued
+  // at login before the user accepted the privacy agreement carries the
+  // "researcher" role but must NOT be able to reach individual records.
+  describe("pre-privacy-agreement token is blocked (UC3)", () => {
+    function preAgreementToken() {
+      return jwt.sign(
+        {
+          userId: "u3",
+          email: "r@utoronto.ca",
+          role: "researcher",
+          requiresPrivacyAgreement: true,
+        },
+        process.env.JWT_SECRET
+      );
+    }
+
+    it("returns 403 on /donations for a pre-agreement token", async () => {
+      const res = await request(app)
+        .get("/api/research/donations")
+        .set("Authorization", `Bearer ${preAgreementToken()}`);
+      expect(res.status).toBe(403);
+      expect(res.body.message).toMatch(/privacy agreement/i);
+    });
+
+    it("returns 403 on /donations/export for a pre-agreement token", async () => {
+      const res = await request(app)
+        .get("/api/research/donations/export")
+        .set("Authorization", `Bearer ${preAgreementToken()}`);
+      expect(res.status).toBe(403);
+    });
+
+    it("returns 403 on /analytics for a pre-agreement token", async () => {
+      const res = await request(app)
+        .get("/api/research/analytics")
+        .set("Authorization", `Bearer ${preAgreementToken()}`);
+      expect(res.status).toBe(403);
+    });
+  });
 });

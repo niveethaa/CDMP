@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/config";
 
 export default function PrivacyAgreement() {
-  const [agree, setAgree] = useState(false);
+  const [agree, setAgree] = useState(null);
   const navigate = useNavigate();
 
   async function handleAgree() {

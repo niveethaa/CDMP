@@ -106,9 +106,9 @@ The project data coverage is 1993–2024. Riding-level map views are organized b
 | 1997–2003 | `federal_ridings_1996` | Included under `client/public/data/ridings/federal_ridings_1996/` |
 | 2004–2014 | `federal_ridings_2003` | Included under `client/public/data/ridings/federal_ridings_2003/` |
 | 2015–2024 | `federal_ridings_2013` | Included under `client/public/data/ridings/federal_ridings_2013/` |
-| 2025+ | `federal_ridings_2023` | Included under `client/public/data/ridings/federal_ridings_2023/`; no donation data yet |
+| 2025+ | `federal_ridings_2023` | Not bundled yet — no geometry files, no manifest entry, and no donation data |
 
-The current React app uses the 2013 riding map by default because the default data range ends in 2024. In riding view, users can choose boundary-vintage buckets. The 2025 onward bucket loads the 2023 riding map, but shows a no-data message because CDMP does not currently include post-2024 donation data.
+The current React app uses the 2013 riding map by default because the default data range ends in 2024. In riding view, users can choose boundary-vintage buckets. The 2025 onward bucket is defined for completeness but the 2023 riding boundaries are not bundled yet, so selecting it shows an unavailable message; there is also no post-2024 donation data.
 
 ## Riding View Implementation
 

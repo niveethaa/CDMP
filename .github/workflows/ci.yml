@@ -45,6 +45,14 @@ jobs:
         working-directory: ./client
         run: npm ci
 
+      - name: Lint client
+        working-directory: ./client
+        run: npm run lint
+
       - name: Run client tests
         working-directory: ./client
         run: npm test
+
+      - name: Build client (production)
+        working-directory: ./client
+        run: npm run build
