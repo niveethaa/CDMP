@@ -11,10 +11,12 @@ import {
   fetchRidingStatsByProvince,
 } from "../api/regions";
 import {
+  DATA_MIN_YEAR,
   DATA_MAX_YEAR,
   getBoundarySetForFilters,
   getDefaultFilters,
 } from "../utils/boundarySets";
+import { PARTY_LABELS } from "../utils/parties";
 import "../App.css";
 
 const PROVINCE_NAMES = {
@@ -31,16 +33,6 @@ const PROVINCE_NAMES = {
   QC: "Quebec",
   SK: "Saskatchewan",
   YT: "Yukon",
-};
-
-const PARTY_LABELS = {
-  ALL: "All Parties",
-  CPC: "Conservative",
-  LPC: "Liberal",
-  NDP: "NDP",
-  BQ: "Bloc Québécois",
-  GPC: "Green",
-  PPC: "People's Party",
 };
 
 function getBoundaryEndingYear(boundarySet) {
@@ -140,7 +132,7 @@ function buildFilterQuery(filters, activeBoundarySet, includeBoundarySet = false
   };
 
   if (!includeBoundarySet && activeBoundarySet?.hasDonationData === false) {
-    query.beginningYear = 1993;
+    query.beginningYear = DATA_MIN_YEAR;
     query.endingYear = DATA_MAX_YEAR;
   }
 
@@ -557,7 +549,7 @@ export default function HomePage() {
     return (
       <div className="cdmp-fullscreen cdmp-fullscreen--error">
         <p>The donation map is currently unavailable.</p>
-        <p>Make sure the server is running on port 5001.</p>
+        <p>Please try refreshing the page, or check back in a little while.</p>
       </div>
     );
   }
@@ -586,7 +578,15 @@ export default function HomePage() {
                   searchResults.map((result) => (
                     <li
                       key={`${result.type}-${result.code}`}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleSearchSelect(result)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleSearchSelect(result);
+                        }
+                      }}
                     >
                       {result.label}
                     </li>

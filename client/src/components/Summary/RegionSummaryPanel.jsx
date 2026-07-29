@@ -1,22 +1,5 @@
-const PARTY_COLORS = {
-  LPC: "#d71920",
-  CPC: "#1a4782",
-  NDP: "#f37021",
-  BQ: "#003da5",
-  GPC: "#3d9b35",
-  PPC: "#6a0dad",
-  UNKNOWN: "#64748b",
-};
-
-function formatDollars(amount) {
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
-  return `$${Number(amount || 0).toFixed(0)}`;
-}
-
-function formatNumber(n) {
-  return Number(n || 0).toLocaleString("en-CA");
-}
+import { PARTY_COLORS } from "../../utils/partyColors";
+import { formatDollars, formatCount as formatNumber } from "../../utils/format";
 
 function getRegionLevelLabel(level) {
   if (level === "national") return "National Overview";
@@ -63,7 +46,8 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
     1,
   );
   const noDataMessage = stats._noDataMessage;
-  const showNoDataHint = !noDataMessage && !hasUsableData(totals) && !privacy?.isSuppressed;
+  const isSuppressed = Boolean(privacy?.isSuppressed);
+  const showNoDataHint = !noDataMessage && !hasUsableData(totals) && !isSuppressed;
 
   return (
     <div className="region-panel">
@@ -97,6 +81,8 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
         </div>
       )}
 
+      {!isSuppressed && (
+        <>
       <div className="stats-grid stats-grid--dashboard">
         <StatCard
           label={isPerCapita ? "Per Capita" : "Total Donations"}
@@ -149,6 +135,8 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
         </div>
         <TrendLineChart data={donationsTrend} maxTrend={maxTrend} metricMode={filters?.metricMode} />
       </section>
+        </>
+      )}
     </div>
   );
 }
@@ -298,9 +286,7 @@ function PartyBar({ party, maxTotal }) {
         <div className="bar-fill" style={{ width: `${pct}%`, background: color }} />
       </div>
       <span className="party-amount">
-        {party.totalDonations >= 1_000_000
-          ? `$${(party.totalDonations / 1_000_000).toFixed(1)}M`
-          : `$${(party.totalDonations / 1_000).toFixed(0)}K`}
+        {formatDollars(party.totalDonations)}
       </span>
     </div>
   );

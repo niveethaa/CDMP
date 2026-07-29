@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/config";
+import { PARTIES } from "../utils/parties";
+import { DATA_MIN_YEAR, DATA_MAX_YEAR } from "../utils/boundarySets";
 import DonationAnalytics from "./DonationAnalytics";
 
 const DONOR_TYPES = [
@@ -26,18 +28,13 @@ const PROVINCES = [
   { code: "YT", name: "Yukon" },
 ];
 
-const PARTIES = [
-  { code: "ALL", name: "All Parties" },
-  { code: "LPC", name: "Liberal" },
-  { code: "CPC", name: "Conservative" },
-  { code: "NDP", name: "NDP" },
-  { code: "BQ", name: "Bloc Québécois" },
-  { code: "GPC", name: "Green" },
-  { code: "PPC", name: "People's" },
+// Merged donation coverage runs from DATA_MIN_YEAR to DATA_MAX_YEAR.
+const YEARS = [
+  "ALL",
+  ...Array.from({ length: DATA_MAX_YEAR - DATA_MIN_YEAR + 1 }, (_, i) =>
+    String(DATA_MIN_YEAR + i),
+  ),
 ];
-
-// Merged donation coverage runs 1993-2024 (32 years).
-const YEARS = ["ALL", ...Array.from({ length: 32 }, (_, i) => String(1993 + i))];
 
 export default function Dashboard() {
   const navigate = useNavigate();

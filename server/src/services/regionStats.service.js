@@ -25,6 +25,31 @@ function buildPrivacy(donorCount) {
   };
 }
 
+// When a region is below the donor-count suppression threshold, the flag alone
+// is not enough — the underlying figures would still be readable straight from
+// the API response. This withholds the sensitive numbers (and the party/trend
+// breakdowns that could re-identify individual donors) before the data leaves
+// the server, while keeping the non-sensitive region and population context.
+function redactSuppressedStats(result) {
+  if (!result || !result.privacy || !result.privacy.isSuppressed) {
+    return result;
+  }
+
+  return {
+    ...result,
+    totals: {
+      totalDonations: null,
+      donationCount: null,
+      donorCount: null,
+      averageDonation: null,
+      perCapitaAmount: null,
+      population: Number(result.totals?.population || 0),
+    },
+    partyStats: [],
+    donationsTrend: [],
+  };
+}
+
 function roundAmount(value) {
   return Math.round(Number(value || 0) * 100) / 100;
 }
@@ -194,7 +219,7 @@ function combineRegionStatDocuments(group, options = {}) {
 
   const normalizedTotals = normalizeTotals(totals, filters.metricMode);
 
-  return {
+  const combined = {
     region: first.region,
     filters: {
       beginningYear: filters.beginningYear,
@@ -207,6 +232,8 @@ function combineRegionStatDocuments(group, options = {}) {
     donationsTrend,
     privacy: buildPrivacy(normalizedTotals.donorCount),
   };
+
+  return redactSuppressedStats(combined);
 }
 
 function buildBaseQuery({ level, code, provinceCode, boundarySet, beginningYear, endingYear }) {
@@ -370,5 +397,6 @@ module.exports = {
   getRegionStats,
   getRidingStatsForProvince,
   combineRegionStatDocuments,
+  redactSuppressedStats,
   normalizeStatsOptions,
 };

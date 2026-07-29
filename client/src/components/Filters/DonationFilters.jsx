@@ -1,29 +1,21 @@
 import { useState } from "react";
 import {
   BOUNDARY_SETS,
+  DATA_MIN_YEAR,
   DATA_MAX_YEAR,
   getBoundarySetByCode,
   getDefaultFilters,
   getFiltersForBoundarySet,
   isBoundarySetAvailableForRiding,
 } from "../../utils/boundarySets";
-
-const PARTIES = [
-  { code: "ALL", name: "All parties" },
-  { code: "CPC", name: "Conservative" },
-  { code: "LPC", name: "Liberal" },
-  { code: "NDP", name: "New Democratic" },
-  { code: "BQ", name: "Bloc Québécois" },
-  { code: "GPC", name: "Green" },
-  { code: "PPC", name: "People's" },
-];
+import { PARTIES } from "../../utils/parties";
 
 const METRIC_MODES = [
   { code: "total", name: "Total $" },
   { code: "per_capita", name: "Per capita" },
 ];
 
-const MIN_YEAR = 1993;
+const MIN_YEAR = DATA_MIN_YEAR;
 const MAX_YEAR = DATA_MAX_YEAR;
 
 function isRidingMapMode(viewLevel) {

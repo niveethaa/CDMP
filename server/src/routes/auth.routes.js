@@ -57,11 +57,17 @@ router.post("/login", async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
+      await ActivityLog.create({ email, action: "login_failed" }).catch(() => {});
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
+      await ActivityLog.create({
+        user: user._id,
+        email: user.email,
+        action: "login_failed",
+      }).catch(() => {});
       return res.status(401).json({ message: "Invalid email or password." });
     }
 

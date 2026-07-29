@@ -29,6 +29,13 @@ const ORGANIZATION_DONOR_TYPES = [
   "Unincorporated organizations or associations",
 ];
 
+// Escapes user input before it is used inside a MongoDB $regex, so special
+// characters are treated literally instead of as regex syntax (prevents regex
+// injection / ReDoS from crafted search terms).
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // Builds the MongoDB query object from the shared set of request filters.
 // Used identically by /donations, /donations/export, and /analytics.
 function buildDonationQuery({ province, party, year, search, riding, donorType }) {
@@ -47,11 +54,11 @@ function buildDonationQuery({ province, party, year, search, riding, donorType }
   }
 
   if (search && search.trim()) {
-    query["donor.donorDisplayName"] = { $regex: search.trim(), $options: "i" };
+    query["donor.donorDisplayName"] = { $regex: escapeRegex(search.trim()), $options: "i" };
   }
 
   if (riding && riding.trim()) {
-    query["geography.ridingName"] = { $regex: riding.trim(), $options: "i" };
+    query["geography.ridingName"] = { $regex: escapeRegex(riding.trim()), $options: "i" };
   }
 
   if (donorType && donorType !== "ALL") {
