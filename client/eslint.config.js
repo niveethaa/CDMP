@@ -30,4 +30,26 @@ export default defineConfig([
       },
     },
   },
+  {
+    // Unit/integration test files run under Jest (which also exposes Node's
+    // `global`), so declare both Jest and Node globals here.
+    files: ['**/*.{test,spec}.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.jest,
+      },
+    },
+  },
+  {
+    // Root config files (vite.config.js, cypress.config.js, eslint.config.js)
+    // run in Node and use globals like `process`.
+    files: ['**/*.config.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
 ])
