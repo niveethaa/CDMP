@@ -115,7 +115,7 @@ function validateQuerySpec(input) {
   const intent = input.intent;
   const metric = input.metric || "totalDonations";
   const groupBy = input.groupBy === undefined ? null : input.groupBy;
-  const regionLevel = input.regionLevel || "national";
+  let regionLevel = input.regionLevel || "national";
   const beginningYear = input.beginningYear ?? DATA_BEGINNING_YEAR;
   const endingYear = input.endingYear ?? DATA_ENDING_YEAR;
   const limit = input.limit ?? 5;
@@ -249,9 +249,7 @@ function validateQuerySpec(input) {
     errors.push("Only comparison queries can include multiple party codes.");
   }
   if (intent === "ranking" && groupBy === "province") {
-    if (regionLevel !== "province") {
-      errors.push("Province rankings must use regionLevel province.");
-    }
+    regionLevel = "province";
     regionCode = null;
     provinceCode = null;
   } else if (regionLevel === "province" && !regionCode) {

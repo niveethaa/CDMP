@@ -146,7 +146,9 @@ function buildSystemPrompt() {
     "Use uppercase party and province codes.",
     "A comparison uses exactly two partyCodes and groupBy party.",
     "A trend uses groupBy year.",
+    "A province ranking uses groupBy province and regionLevel province.",
     "A riding query includes provinceCode and a compatible boundarySet.",
+    "The limit is an integer from 1 through 5.",
   ].join("\n");
 }
 

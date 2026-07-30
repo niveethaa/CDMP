@@ -1,5 +1,47 @@
 const AIProviderError = require("./providerError");
 
+const ANTHROPIC_SCHEMA_CONSTRAINT_DESCRIPTIONS = new Map([
+  ["maximum", (value) => `Maximum value: ${value}.`],
+  ["maxItems", (value) => `Maximum items: ${value}.`],
+  ["maxLength", (value) => `Maximum length: ${value}.`],
+  ["minimum", (value) => `Minimum value: ${value}.`],
+  ["minItems", (value) => `Minimum items: ${value}.`],
+  ["minLength", (value) => `Minimum length: ${value}.`],
+]);
+
+function transformSchemaForAnthropic(value) {
+  if (Array.isArray(value)) {
+    return value.map(transformSchemaForAnthropic);
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  const transformed = {};
+  const constraints = [];
+
+  for (const [key, item] of Object.entries(value)) {
+    const describeConstraint =
+      ANTHROPIC_SCHEMA_CONSTRAINT_DESCRIPTIONS.get(key);
+    if (describeConstraint) {
+      constraints.push(describeConstraint(item));
+    } else {
+      transformed[key] = transformSchemaForAnthropic(item);
+    }
+  }
+
+  if (constraints.length) {
+    transformed.description = [
+      typeof transformed.description === "string"
+        ? transformed.description.trim()
+        : "",
+      ...constraints,
+    ].filter(Boolean).join(" ");
+  }
+
+  return transformed;
+}
+
 function createAnthropicProvider({
   env = process.env,
   fetchImpl = globalThis.fetch,
@@ -28,6 +70,7 @@ function createAnthropicProvider({
 
   return {
     async generateJson({ systemPrompt, userPrompt, jsonSchema }) {
+      const anthropicSchema = transformSchemaForAnthropic(jsonSchema);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -47,7 +90,7 @@ function createAnthropicProvider({
             output_config: {
               format: {
                 type: "json_schema",
-                schema: jsonSchema,
+                schema: anthropicSchema,
               },
             },
             temperature: 0,

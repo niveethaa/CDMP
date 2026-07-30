@@ -23,6 +23,75 @@ function outputSchema() {
 }
 
 describe("Anthropic provider", () => {
+  it("translates unsupported schema constraints without changing the original", async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        content: [{ type: "text", text: '{"supported":false}' }],
+      }),
+    });
+    const jsonSchema = {
+      type: "object",
+      properties: {
+        partyCodes: {
+          type: "array",
+          items: { type: "string" },
+          maxItems: 2,
+        },
+        year: {
+          type: "integer",
+          description: "Donation year.",
+          minimum: 1993,
+          maximum: 2024,
+        },
+        limit: {
+          type: "integer",
+          minimum: 1,
+          maximum: 5,
+        },
+      },
+      required: ["partyCodes", "year", "limit"],
+      additionalProperties: false,
+    };
+    const originalSchema = JSON.parse(JSON.stringify(jsonSchema));
+    const provider = createAnthropicProvider({
+      env: providerEnv(),
+      fetchImpl,
+    });
+
+    await provider.generateJson({
+      systemPrompt: "system",
+      userPrompt: "user",
+      jsonSchema,
+    });
+
+    const request = fetchImpl.mock.calls[0][1];
+    const sentSchema =
+      JSON.parse(request.body).output_config.format.schema;
+    expect(sentSchema).toEqual({
+      type: "object",
+      properties: {
+        partyCodes: {
+          type: "array",
+          items: { type: "string" },
+          description: "Maximum items: 2.",
+        },
+        year: {
+          type: "integer",
+          description:
+            "Donation year. Minimum value: 1993. Maximum value: 2024.",
+        },
+        limit: {
+          type: "integer",
+          description: "Minimum value: 1. Maximum value: 5.",
+        },
+      },
+      required: ["partyCodes", "year", "limit"],
+      additionalProperties: false,
+    });
+    expect(jsonSchema).toEqual(originalSchema);
+  });
+
   it("returns structured Claude content", async () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,

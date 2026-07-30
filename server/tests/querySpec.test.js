@@ -125,7 +125,7 @@ describe("QuerySpec validation", () => {
     expect(result.regionCode).toBeNull();
     expect(result.provinceCode).toBeNull();
 
-    expect(() =>
+    expect(
       validateQuerySpec({
         ...validSummary(),
         intent: "ranking",
@@ -133,7 +133,11 @@ describe("QuerySpec validation", () => {
         regionLevel: "national",
         regionCode: "CA",
       }),
-    ).toThrow("Province rankings must use regionLevel province");
+    ).toMatchObject({
+      regionLevel: "province",
+      regionCode: null,
+      provinceCode: null,
+    });
   });
 
   it("accepts provinceCode as the province identifier", () => {
