@@ -4,6 +4,7 @@ const healthRoutes = require("./routes/health.routes");
 const regionsRoutes = require("./routes/regions.routes");
 const authRoutes = require("./routes/auth.routes");
 const researchRoutes = require("./routes/research.routes");
+const askRoutes = require("./routes/ask.routes");
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use("/api/health", healthRoutes);
 app.use("/api/regions", regionsRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/research", researchRoutes);
+app.use("/api/ask", askRoutes);
 
 
 app.use((req, res) => {
