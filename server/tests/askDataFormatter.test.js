@@ -74,4 +74,19 @@ describe("Ask Data answer formatter", () => {
     expect(answer).toContain("No party increased");
     expect(answer).toContain("Liberal decreased by $200");
   });
+
+  it("explains when population data is unavailable", () => {
+    const answer = formatAnswer(
+      query({ intent: "summary", metric: "perCapitaAmount" }),
+      [{
+        label: "Canada",
+        value: null,
+        suppressed: false,
+        unavailable: true,
+        unavailableReason: "Population data is unavailable for this selection.",
+      }],
+    );
+
+    expect(answer).toBe("Population data is unavailable for this selection.");
+  });
 });

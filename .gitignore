@@ -25,6 +25,8 @@ cypress/videos/
 
 # OS files
 .DS_Store
+.codex/
+.codex-*
 
 # Local raw data files
 data/

@@ -45,7 +45,7 @@ function periodLabel(beginningYear, endingYear) {
 }
 
 function visibleRows(rows) {
-  return rows.filter((row) => !row.suppressed);
+  return rows.filter((row) => !row.suppressed && !row.unavailable);
 }
 
 function noDataMessage() {
@@ -56,9 +56,15 @@ function suppressedMessage() {
   return "All results are below the privacy suppression threshold.";
 }
 
+function unavailableMessage(rows) {
+  return rows.find((row) => row.unavailable)?.unavailableReason
+    || "The requested data is unavailable.";
+}
+
 function formatSummary(query, rows) {
   const row = rows[0];
   if (!row) return noDataMessage();
+  if (row.unavailable) return unavailableMessage(rows);
   if (row.suppressed) {
     return `The result for ${row.label} is below the privacy suppression threshold.`;
   }
@@ -68,6 +74,9 @@ function formatSummary(query, rows) {
 function formatRanking(query, rows) {
   if (!rows.length) return noDataMessage();
   const visible = visibleRows(rows);
+  if (!visible.length && rows.some((row) => row.unavailable)) {
+    return unavailableMessage(rows);
+  }
   if (!visible.length) return suppressedMessage();
   const [top, ...rest] = visible;
   const label = metricLabel(query.metric);
@@ -85,6 +94,9 @@ function formatRanking(query, rows) {
 function formatTrend(query, rows) {
   if (!rows.length) return noDataMessage();
   const visible = visibleRows(rows);
+  if (!visible.length && rows.some((row) => row.unavailable)) {
+    return unavailableMessage(rows);
+  }
   if (!visible.length) return suppressedMessage();
   const seriesNames = [...new Set(visible.map((row) => row.series).filter(Boolean))];
   if (seriesNames.length) {
@@ -105,6 +117,9 @@ function formatTrend(query, rows) {
 function formatComparison(query, rows) {
   if (!rows.length) return noDataMessage();
   const visible = visibleRows(rows);
+  if (!visible.length && rows.some((row) => row.unavailable)) {
+    return unavailableMessage(rows);
+  }
   if (!visible.length) return suppressedMessage();
   const label = metricLabel(query.metric);
   const period = periodLabel(query.beginningYear, query.endingYear);
@@ -126,6 +141,9 @@ function describeChange(row, metric) {
 function formatChange(query, rows) {
   if (!rows.length) return noDataMessage();
   const visible = visibleRows(rows);
+  if (!visible.length && rows.some((row) => row.unavailable)) {
+    return unavailableMessage(rows);
+  }
   if (!visible.length) return suppressedMessage();
   const period = periodLabel(query.beginningYear, query.endingYear);
   const descriptions = visible.map((row) => describeChange(row, query.metric));
