@@ -146,8 +146,11 @@ function buildSystemPrompt() {
     "Use uppercase party and province codes.",
     "A comparison uses exactly two partyCodes and groupBy party.",
     "A trend uses groupBy year.",
+    "Questions asking which party, the top party, or the party with the most or highest value are rankings: use intent ranking, groupBy party, and an empty partyCodes array so all parties are ranked.",
     "A province ranking uses groupBy province and regionLevel province.",
-    "A riding query includes provinceCode and a compatible boundarySet.",
+    "Questions asking which ridings, the top ridings, or the ridings with the most or highest value are rankings: use intent ranking, groupBy riding, regionLevel riding, regionCode null, the named provinceCode, and a year-compatible boundarySet.",
+    'Example: "Which party received the most donations nationally in 2024?" uses {"intent":"ranking","metric":"totalDonations","groupBy":"party","partyCodes":[],"regionLevel":"national","regionCode":null,"provinceCode":null,"beginningYear":2024,"endingYear":2024,"boundarySet":null,"limit":1}.',
+    'Example: "Which ridings in Ontario had the most NDP donations in 2024?" uses {"intent":"ranking","metric":"totalDonations","groupBy":"riding","partyCodes":["NDP"],"regionLevel":"riding","regionCode":null,"provinceCode":"ON","beginningYear":2024,"endingYear":2024,"boundarySet":"federal_ridings_2013","limit":5}.',
     "The limit is an integer from 1 through 5.",
     "previousQuery is prior context only, not a default to repeat. Always derive intent, partyCodes, metric, groupBy, and region fields fully from the current question; only fall back to previousQuery for fields the current question leaves genuinely ambiguous.",
   ].join("\n");

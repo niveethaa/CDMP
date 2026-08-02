@@ -1,5 +1,6 @@
 const {
   AskDataInterpreterError,
+  buildSystemPrompt,
   interpretQuestion,
   sanitizeMapFilters,
 } = require("../src/services/askDataInterpreter.service");
@@ -46,6 +47,106 @@ describe("Ask Data natural-language interpreter", () => {
       },
     });
     expect(provider.generateJson).toHaveBeenCalledTimes(1);
+  });
+
+  it("defines explicit party and riding ranking rules", () => {
+    const prompt = buildSystemPrompt();
+
+    expect(prompt).toContain(
+      "use intent ranking, groupBy party, and an empty partyCodes array",
+    );
+    expect(prompt).toContain(
+      "use intent ranking, groupBy riding, regionLevel riding, regionCode null",
+    );
+    expect(prompt).toContain(
+      '"groupBy":"party","partyCodes":[],"regionLevel":"national"',
+    );
+    expect(prompt).toContain(
+      '"groupBy":"riding","partyCodes":["NDP"],"regionLevel":"riding"',
+    );
+  });
+
+  it("accepts and normalizes a party ranking", async () => {
+    const provider = {
+      generateJson: jest.fn().mockResolvedValue(
+        validModelOutput({
+          intent: "ranking",
+          groupBy: "party",
+          partyCodes: [],
+          regionLevel: "national",
+          regionCode: null,
+          provinceCode: null,
+          beginningYear: 2024,
+          endingYear: 2024,
+          limit: 1,
+        }),
+      ),
+    };
+
+    await expect(
+      interpretQuestion(
+        { question: "Which party received the most donations in 2024?" },
+        { provider },
+      ),
+    ).resolves.toEqual({
+      supported: true,
+      querySpec: {
+        intent: "ranking",
+        metric: "totalDonations",
+        groupBy: "party",
+        partyCodes: [],
+        regionLevel: "national",
+        regionCode: "CA",
+        provinceCode: null,
+        beginningYear: 2024,
+        endingYear: 2024,
+        boundarySet: null,
+        limit: 1,
+      },
+    });
+  });
+
+  it("accepts and normalizes a riding ranking", async () => {
+    const provider = {
+      generateJson: jest.fn().mockResolvedValue(
+        validModelOutput({
+          intent: "ranking",
+          groupBy: "riding",
+          partyCodes: ["NDP"],
+          regionLevel: "riding",
+          regionCode: null,
+          provinceCode: "ON",
+          beginningYear: 2024,
+          endingYear: 2024,
+          boundarySet: "federal_ridings_2013",
+          limit: 5,
+        }),
+      ),
+    };
+
+    await expect(
+      interpretQuestion(
+        {
+          question: "Which Ontario ridings had the most NDP donations in 2024?",
+        },
+        { provider },
+      ),
+    ).resolves.toEqual({
+      supported: true,
+      querySpec: {
+        intent: "ranking",
+        metric: "totalDonations",
+        groupBy: "riding",
+        partyCodes: ["NDP"],
+        regionLevel: "riding",
+        regionCode: null,
+        provinceCode: "ON",
+        beginningYear: 2024,
+        endingYear: 2024,
+        boundarySet: "federal_ridings_2013",
+        limit: 5,
+      },
+    });
   });
 
   it("includes safe context but excludes unrelated or donor data", async () => {
