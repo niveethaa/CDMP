@@ -9,6 +9,7 @@ The Docker setup uses a local MongoDB container instead of MongoDB Atlas.
 
 - Docker Desktop
 - The Google Drive upload zip, which contains the MongoDB dump and raw data
+- An OpenAI, Claude, or Gemini API key if Ask CDMP should be enabled
 
 Expected local ports:
 
@@ -19,8 +20,9 @@ Expected local ports:
 The Compose file pins MongoDB to `mongo:8.0` so local restores match the
 MongoDB Atlas 8.0 dump source.
 
-Docker does not require `server/.env` or a MongoDB Atlas URI. The Docker
-services use the local MongoDB container configured in `docker-compose.yml`.
+Docker uses `server/.env` for private backend and AI settings. It does not
+require a MongoDB Atlas URI because Compose replaces `MONGODB_URI` with the
+local MongoDB container configured in `docker-compose.yml`.
 
 ## Fast Setup With Mongo Dump
 
@@ -31,11 +33,31 @@ This is the path a professor should use for grading or demo.
 2. Clone the repository.
 
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss.git
    cd course-project-nacss
    ```
 
-3. Download `course-project-nacss-drive-upload-2026-07-10.zip` from Google
+3. Create the private backend environment file.
+
+   ```bash
+   cp server/.env.example server/.env
+   ```
+
+   Replace `JWT_SECRET` with a long random value. To enable Ask CDMP, select one
+   provider and add its key:
+
+   | Provider | `AI_PROVIDER` | Tested `AI_MODEL` | `AI_BASE_URL` |
+   | --- | --- | --- | --- |
+   | OpenAI | `openai-compatible` | `gpt-4o-mini` | `https://api.openai.com/v1` |
+   | Claude | `anthropic` | `claude-sonnet-4-6` | Leave empty |
+   | Gemini | `gemini` | `gemini-3.5-flash-lite` | Leave empty |
+
+   Put the selected provider's key in `AI_API_KEY`. The rest of the application
+   works without an AI key, but Ask CDMP cannot answer questions. See
+   [server/README.md](./server/README.md) for copyable provider configurations
+   and official key links.
+
+4. Download `course-project-nacss-drive-upload-2026-07-10.zip` from Google
    Drive into the project root and unzip it.
 
    ```bash
@@ -50,19 +72,19 @@ This is the path a professor should use for grading or demo.
 
    The zip and archive are large and should stay in Google Drive, not GitHub.
 
-4. Start the containers.
+5. Start the containers.
 
    ```bash
    docker compose up --build -d
    ```
 
-5. Restore the MongoDB dump.
+6. Restore the MongoDB dump.
 
    ```bash
    docker compose run --rm mongo-tools mongorestore --host mongo --drop --archive=/dump/course_project_nacss.archive
    ```
 
-6. Confirm the restore.
+7. Confirm the restore.
 
    ```bash
    docker compose --profile tools run --rm data-importer npm run check:data
@@ -80,19 +102,27 @@ This is the path a professor should use for grading or demo.
    Donation riding assignments: 5374039
    ```
 
-7. Open the app.
+8. Open the app.
 
    ```text
    http://localhost:8080
    ```
 
-8. Check the backend.
+9. Check the backend.
 
    ```text
    http://localhost:5001/api/health
    ```
 
-9. Stop the app when finished.
+10. Test Ask CDMP if an AI provider was configured.
+
+   ```bash
+   curl -sS -X POST http://localhost:5001/api/ask \
+     -H "Content-Type: application/json" \
+     --data '{"question":"Which party received the most donations nationally in 2024?"}'
+   ```
+
+11. Stop the app when finished.
 
    ```bash
    docker compose down
@@ -102,6 +132,8 @@ This is the path a professor should use for grading or demo.
 
 Use this path only when you need to prove or rerun the source-data pipeline.
 The fast Mongo dump restore is the recommended grading/demo path.
+Complete the Docker installation, repository clone, and `server/.env` setup
+from steps 1–3 above before starting this path.
 
 The `data-importer` service mounts both `./data` and
 `./client/public/data/ridings`, so regenerated mapping CSVs and riding GeoJSON
@@ -312,6 +344,13 @@ Mongo dump, or generated PCFRF files to GitHub.
 
 ## Troubleshooting
 
+- If Compose reports that `server/.env` is missing, copy
+  `server/.env.example` to `server/.env`.
+- If Ask CDMP reports that the AI service is unavailable, verify
+  `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, and `AI_BASE_URL`, then run
+  `docker compose up -d --force-recreate server`.
+- If AI requests time out, increase `AI_REQUEST_TIMEOUT_MS` and recreate the
+  server container.
 - If restore fails with `archive not found`, confirm the file is at `mongo-dump/course_project_nacss.archive`.
 - If map or dashboard APIs return empty data, restore the Mongo dump or run the full import pipeline.
 - If `import:postal-riding-mappings` fails, confirm `data/reference/postal_riding_mappings.csv` exists.

@@ -1,16 +1,48 @@
-# React + Vite
+# CDMP Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The React frontend provides the donation map, research dashboard, and Ask CDMP
+interface. AI requests are sent to the backend; no provider key belongs in the
+client environment or browser bundle.
 
-Currently, two official plugins are available:
+## Docker Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Run the complete application from the repository root:
 
-## React Compiler
+```bash
+cp server/.env.example server/.env
+docker compose up --build -d
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Configure the AI provider in `server/.env`, not `client/.env`. The Docker client
+is available at `http://localhost:8080` and calls the backend at
+`http://localhost:5001/api`.
 
-## Expanding the ESLint configuration
+See [../DOCKER.md](../DOCKER.md) for the MongoDB restore steps and
+[../server/README.md](../server/README.md) for OpenAI, Claude, and Gemini setup.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Local Development
+
+```bash
+cp .env.example .env
+npm install
+npm run dev
+```
+
+The default `VITE_API_BASE_URL` is `http://localhost:5001/api`, so the backend
+must also be running. Vite environment variables are included in the browser
+bundle; never place `AI_API_KEY`, `JWT_SECRET`, or another secret in
+`client/.env` or any `VITE_` variable.
+
+## Tests
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+For end-to-end tests against Docker:
+
+```bash
+npm run cypress:run
+```

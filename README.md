@@ -1,4 +1,38 @@
-## Project Overview
+# CDMP (Canadian Donation Map)
+
+## Quick Start
+
+The recommended local setup uses Docker Desktop, a private backend environment
+file, and the MongoDB dump described in [DOCKER.md](./DOCKER.md).
+
+```bash
+git clone https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss.git
+cd course-project-nacss
+cp server/.env.example server/.env
+```
+
+Open `server/.env`, replace `JWT_SECRET`, and add an AI provider key if you want
+to use Ask CDMP. OpenAI is the default example. Claude and Gemini use the same
+feature through the provider adapter. Then start the application:
+
+```bash
+docker compose up --build -d
+```
+
+| Provider | `AI_PROVIDER` | Tested `AI_MODEL` | `AI_BASE_URL` |
+| --- | --- | --- | --- |
+| OpenAI | `openai-compatible` | `gpt-4o-mini` | `https://api.openai.com/v1` |
+| Claude | `anthropic` | `claude-sonnet-4-6` | Leave empty |
+| Gemini | `gemini` | `gemini-3.5-flash-lite` | Leave empty |
+
+Only one provider is active at a time. Put its key in `AI_API_KEY`, then open
+the application at `http://localhost:8080`. The map and research features can
+run without an AI key; Ask CDMP requires one. A fresh database also needs the
+MongoDB dump restore described in [DOCKER.md](./DOCKER.md).
+
+See [server/README.md](./server/README.md) for complete provider examples and
+local backend setup, [client/README.md](./client/README.md) for frontend setup,
+and [DOCKER.md](./DOCKER.md) for database restore and Docker handoff steps.
 
 ## Docker and Data Handoff
 
@@ -207,12 +241,12 @@ The app degrades gracefully instead of crashing or showing blank screens. Handle
 
 Warnings use plain, non-technical language and do not block map controls, filters, search, or navigation.
 
-## Setup
+## Researcher Account Setup
 
 The user needs to navigate to `/login` and then `/register` where they register their university email (`.ca` or `.edu`) and password. Then the user is sent back to the login page to login.
 
-User needs to make sure in `server/.env` has: 
-  JWT_SECRET=yoursecretkeyhere
+The backend requires a private `JWT_SECRET` in `server/.env`. Create this file
+from `server/.env.example` and replace the example value before running the
+application.
 
 The user then has access to the dashboard where they can view individual donation records and filter by donor type, province, party, year, riding, and search donor name. They can also export a CSV file of the data. As well as, all the queries and exports are logged to the activity log.
-
