@@ -4,10 +4,10 @@ import { isMapCompatible, convertToMapFilters, getProvinceCode, getRidingCode } 
 import { generateSuggestions } from "../../utils/askDataSuggestions";
 
 const EXAMPLE_PROMPTS = [
-  "How much did the Liberals receive in Ontario in 2020?",
-  "Which province donated the most to the NDP?",
-  "Show the Conservative donation trend since 2015.",
-  "Which ridings in Ontario had the most Conservative donations between 2015 and 2024?",
+  "Compare Liberal, Conservative, and NDP donations in Ontario in 2023.",
+  "Which ten Ontario ridings raised the most in 2023?",
+  "Which year had the most Green Party donations from 2015 to 2023?",
+  "Which party increased donations the most from 2019 to 2023?",
 ];
 
 const PROVINCE_CODES = {
@@ -27,9 +27,12 @@ const PROVINCE_CODES = {
 };
 
 function formatDollars(amount) {
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
-  return `$${Number(amount || 0).toFixed(0)}`;
+  const value = Number(amount || 0);
+  const sign = value < 0 ? "-" : "";
+  const absoluteValue = Math.abs(value);
+  if (absoluteValue >= 1_000_000) return `${sign}$${(absoluteValue / 1_000_000).toFixed(1)}M`;
+  if (absoluteValue >= 1_000) return `${sign}$${(absoluteValue / 1_000).toFixed(0)}K`;
+  return `${sign}$${absoluteValue.toFixed(0)}`;
 }
 
 function formatRowValue(value, metric) {
@@ -57,6 +60,9 @@ function buildFilterSummary(interpretedFilters) {
     parts.push(interpretedFilters.partyCodes.join(", "));
   }
   if (interpretedFilters.regionCode) parts.push(interpretedFilters.regionCode);
+  if (interpretedFilters.regionCodes?.length) {
+    parts.push(interpretedFilters.regionCodes.join(", "));
+  }
   if (interpretedFilters.beginningYear && interpretedFilters.endingYear) {
     parts.push(`${interpretedFilters.beginningYear}–${interpretedFilters.endingYear}`);
   }
@@ -290,7 +296,7 @@ export default function AskDataPanel({ currentFilters, onApplyFilters, onClearFi
         <div className="ask-unsupported">
           <p>This question is outside the supported CDMP aggregate queries.</p>
           <p className="ask-unsupported-hint">
-            Try asking about donation totals, trends, or comparisons by party, province, or riding.
+            Try asking about totals, rankings, trends, comparisons, or changes by party, province, riding, or year.
           </p>
         </div>
       )}

@@ -88,6 +88,21 @@ function generateSuggestions(querySpec) {
     );
   }
 
+  if (
+    querySpec.beginningYear !== querySpec.endingYear
+    && querySpec.intent !== "change"
+  ) {
+    suggestions.push(
+      `Which party increased donations the most ${region} from ${querySpec.beginningYear} to ${querySpec.endingYear}?`
+    );
+  }
+
+  if (querySpec.intent !== "ranking") {
+    suggestions.push(
+      `Which year had the most ${party} donations ${region} from ${querySpec.beginningYear} to ${querySpec.endingYear}?`
+    );
+  }
+
   if (alternateYear) {
     suggestions.push(
       `Show the same data for ${alternateYear}`

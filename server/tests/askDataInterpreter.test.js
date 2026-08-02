@@ -13,12 +13,14 @@ function validModelOutput(overrides = {}) {
       metric: "totalDonations",
       groupBy: null,
       partyCodes: ["lpc"],
+      regionCodes: [],
       regionLevel: "province",
       regionCode: "on",
       beginningYear: 2020,
       endingYear: 2024,
       boundarySet: null,
       limit: 5,
+      sortOrder: "desc",
       ...overrides,
     },
   });
@@ -59,11 +61,14 @@ describe("Ask Data natural-language interpreter", () => {
       "use intent ranking, groupBy riding, regionLevel riding, regionCode null",
     );
     expect(prompt).toContain(
-      '"groupBy":"party","partyCodes":[],"regionLevel":"national"',
+      '"groupBy":"party","partyCodes":[],"regionCodes":[],"regionLevel":"national"',
     );
     expect(prompt).toContain(
-      '"groupBy":"riding","partyCodes":["NDP"],"regionLevel":"riding"',
+      '"groupBy":"riding","partyCodes":["NDP"],"regionCodes":[],"regionLevel":"riding"',
     );
+    expect(prompt).toContain("A province comparison uses groupBy province");
+    expect(prompt).toContain("uses intent change, groupBy party or province");
+    expect(prompt).toContain("Never silently omit or replace one");
   });
 
   it("accepts and normalizes a party ranking", async () => {
@@ -95,6 +100,7 @@ describe("Ask Data natural-language interpreter", () => {
         metric: "totalDonations",
         groupBy: "party",
         partyCodes: [],
+        regionCodes: [],
         regionLevel: "national",
         regionCode: "CA",
         provinceCode: null,
@@ -102,6 +108,7 @@ describe("Ask Data natural-language interpreter", () => {
         endingYear: 2024,
         boundarySet: null,
         limit: 1,
+        sortOrder: "desc",
       },
     });
   });
@@ -138,6 +145,7 @@ describe("Ask Data natural-language interpreter", () => {
         metric: "totalDonations",
         groupBy: "riding",
         partyCodes: ["NDP"],
+        regionCodes: [],
         regionLevel: "riding",
         regionCode: null,
         provinceCode: "ON",
@@ -145,7 +153,57 @@ describe("Ask Data natural-language interpreter", () => {
         endingYear: 2024,
         boundarySet: "federal_ridings_2013",
         limit: 5,
+        sortOrder: "desc",
       },
+    });
+  });
+
+  it("accepts expanded multi-party and change query specifications", async () => {
+    const comparisonProvider = {
+      generateJson: jest.fn().mockResolvedValue(
+        validModelOutput({
+          intent: "comparison",
+          groupBy: "party",
+          partyCodes: ["LPC", "CPC", "NDP"],
+          beginningYear: 2023,
+          endingYear: 2023,
+          limit: 3,
+        }),
+      ),
+    };
+    const changeProvider = {
+      generateJson: jest.fn().mockResolvedValue(
+        validModelOutput({
+          intent: "change",
+          groupBy: "party",
+          partyCodes: [],
+          regionLevel: "national",
+          regionCode: null,
+          provinceCode: null,
+          beginningYear: 2019,
+          endingYear: 2023,
+          limit: 1,
+        }),
+      ),
+    };
+
+    await expect(
+      interpretQuestion(
+        { question: "Compare Liberal, Conservative, and NDP donations in Ontario in 2023." },
+        { provider: comparisonProvider },
+      ),
+    ).resolves.toMatchObject({
+      supported: true,
+      querySpec: { partyCodes: ["LPC", "CPC", "NDP"] },
+    });
+    await expect(
+      interpretQuestion(
+        { question: "Which party increased the most from 2019 to 2023?" },
+        { provider: changeProvider },
+      ),
+    ).resolves.toMatchObject({
+      supported: true,
+      querySpec: { intent: "change", groupBy: "party" },
     });
   });
 

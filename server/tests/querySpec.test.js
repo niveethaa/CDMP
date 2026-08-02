@@ -9,12 +9,14 @@ function validSummary(overrides = {}) {
     metric: "totalDonations",
     groupBy: null,
     partyCodes: ["lpc"],
+    regionCodes: [],
     regionLevel: "province",
     regionCode: "on",
     beginningYear: 2019,
     endingYear: 2024,
     boundarySet: null,
     limit: 5,
+    sortOrder: "desc",
     ...overrides,
   };
 }
@@ -26,6 +28,7 @@ describe("QuerySpec validation", () => {
       metric: "totalDonations",
       groupBy: null,
       partyCodes: ["LPC"],
+      regionCodes: [],
       regionLevel: "province",
       regionCode: "ON",
       provinceCode: "ON",
@@ -33,6 +36,7 @@ describe("QuerySpec validation", () => {
       endingYear: 2024,
       boundarySet: null,
       limit: 5,
+      sortOrder: "desc",
     });
   });
 
@@ -41,11 +45,13 @@ describe("QuerySpec validation", () => {
       metric: "totalDonations",
       groupBy: null,
       partyCodes: [],
+      regionCodes: [],
       regionLevel: "national",
       regionCode: "CA",
       beginningYear: 1993,
       endingYear: 2024,
       limit: 5,
+      sortOrder: "desc",
     });
   });
 
@@ -54,7 +60,8 @@ describe("QuerySpec validation", () => {
     ["metric", { metric: "largestDonation" }, "Unsupported metric"],
     ["party", { partyCodes: ["XYZ"] }, "Unsupported party code"],
     ["year", { beginningYear: 1992 }, "beginningYear must be between"],
-    ["limit", { limit: 6 }, "limit must be an integer"],
+    ["limit", { limit: 11 }, "limit must be an integer"],
+    ["sort order", { sortOrder: "sideways" }, "Unsupported sort order"],
     ["province", { regionCode: "ZZ" }, "Unsupported province regionCode"],
   ])("rejects an invalid %s", (_name, overrides, message) => {
     expect(() => validateQuerySpec(validSummary(overrides))).toThrow(message);
@@ -86,23 +93,139 @@ describe("QuerySpec validation", () => {
     ).toThrow("Unknown QuerySpec field");
   });
 
-  it("restricts comparisons to exactly two parties", () => {
+  it("accepts comparisons of two through six parties", () => {
     const comparison = {
       ...validSummary(),
       intent: "comparison",
       groupBy: "party",
     };
 
-    expect(() =>
-      validateQuerySpec({ ...comparison, partyCodes: ["LPC", "CPC", "NDP"] }),
-    ).toThrow("exactly two party codes");
+    expect(
+      validateQuerySpec({ ...comparison, partyCodes: ["LPC", "CPC", "NDP"] })
+        .partyCodes,
+    ).toEqual(["LPC", "CPC", "NDP"]);
     expect(() =>
       validateQuerySpec({ ...comparison, partyCodes: ["LPC"] }),
-    ).toThrow("exactly two party codes");
+    ).toThrow("between two and six party codes");
     expect(
       validateQuerySpec({ ...comparison, partyCodes: ["lpc", "cpc"] })
         .partyCodes,
     ).toEqual(["LPC", "CPC"]);
+  });
+
+  it("accepts province comparisons", () => {
+    expect(
+      validateQuerySpec({
+        ...validSummary(),
+        intent: "comparison",
+        groupBy: "province",
+        partyCodes: [],
+        regionCodes: ["on", "bc", "ab"],
+      }),
+    ).toMatchObject({
+      regionCodes: ["ON", "BC", "AB"],
+      regionLevel: "province",
+      regionCode: null,
+      provinceCode: null,
+    });
+  });
+
+  it("accepts year comparisons", () => {
+    expect(
+      validateQuerySpec({
+        ...validSummary(),
+        intent: "comparison",
+        groupBy: "year",
+        beginningYear: 2019,
+        endingYear: 2023,
+      }),
+    ).toMatchObject({
+      groupBy: "year",
+      beginningYear: 2019,
+      endingYear: 2023,
+    });
+  });
+
+  it("accepts multi-party trends", () => {
+    expect(
+      validateQuerySpec({
+        ...validSummary(),
+        intent: "trend",
+        groupBy: "year",
+        partyCodes: ["LPC", "CPC", "NDP"],
+      }).partyCodes,
+    ).toEqual(["LPC", "CPC", "NDP"]);
+  });
+
+  it("accepts highest and lowest year rankings", () => {
+    expect(
+      validateQuerySpec({
+        ...validSummary(),
+        intent: "ranking",
+        groupBy: "year",
+        sortOrder: "asc",
+        limit: 10,
+      }),
+    ).toMatchObject({
+      groupBy: "year",
+      sortOrder: "asc",
+      limit: 10,
+    });
+  });
+
+  it("accepts party and province change rankings", () => {
+    expect(
+      validateQuerySpec({
+        ...validSummary(),
+        intent: "change",
+        groupBy: "party",
+        partyCodes: [],
+      }),
+    ).toMatchObject({ intent: "change", groupBy: "party" });
+
+    expect(
+      validateQuerySpec({
+        ...validSummary(),
+        intent: "change",
+        groupBy: "province",
+        partyCodes: ["NDP"],
+        regionCodes: ["ON", "BC"],
+      }),
+    ).toMatchObject({
+      intent: "change",
+      groupBy: "province",
+      regionCodes: ["ON", "BC"],
+    });
+  });
+
+  it("rejects invalid expanded-query combinations", () => {
+    expect(() =>
+      validateQuerySpec({
+        ...validSummary(),
+        regionCodes: ["ON", "BC"],
+      }),
+    ).toThrow("regionCodes are only supported");
+
+    expect(() =>
+      validateQuerySpec({
+        ...validSummary(),
+        intent: "comparison",
+        groupBy: "province",
+        partyCodes: [],
+        regionCodes: ["ON"],
+      }),
+    ).toThrow("at least two regionCodes");
+
+    expect(() =>
+      validateQuerySpec({
+        ...validSummary(),
+        intent: "change",
+        groupBy: "party",
+        partyCodes: [],
+        beginningYear: 2023,
+        endingYear: 2023,
+      }),
+    ).toThrow("require two different years");
   });
 
   it("enforces trend grouping", () => {
