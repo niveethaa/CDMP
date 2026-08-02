@@ -48,10 +48,27 @@ describe("QuerySpec validation", () => {
       regionCodes: [],
       regionLevel: "national",
       regionCode: "CA",
-      beginningYear: 1993,
-      endingYear: 2024,
+      beginningYear: 2023,
+      endingYear: 2023,
       limit: 5,
       sortOrder: "desc",
+    });
+  });
+
+  it("uses a five-year default for trends and changes", () => {
+    expect(validateQuerySpec({
+      intent: "trend",
+      groupBy: "year",
+    })).toMatchObject({
+      beginningYear: 2019,
+      endingYear: 2023,
+    });
+    expect(validateQuerySpec({
+      intent: "change",
+      groupBy: "party",
+    })).toMatchObject({
+      beginningYear: 2019,
+      endingYear: 2023,
     });
   });
 
