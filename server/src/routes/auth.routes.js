@@ -1,9 +1,11 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const User = require("../models/User");
 const ActivityLog = require("../models/ActivityLog");
 const { requireAuth } = require("../middleware/auth.middleware");
+const { sendVerificationEmail, sendPasswordResetEmail } = require("../services/email.service");
 
 const router = express.Router();
 
@@ -16,9 +18,6 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Email and password are required." });
     }
 
-    // University of Toronto addresses only. This matches any subdomain of
-    // utoronto.ca (e.g. utoronto.ca, mail.utoronto.ca, cs.utoronto.ca) but
-    // rejects unrelated .ca / .edu domains.
     const normalizedEmail = email.trim().toLowerCase();
     if (
       !normalizedEmail.endsWith("@utoronto.ca") &&
@@ -37,12 +36,121 @@ router.post("/register", async (req, res) => {
     }
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ email, password: hashed });
+    const verificationToken = crypto.randomBytes(32).toString("hex");
 
-    res.status(201).json({ message: "Account created successfully.", userId: user._id });
+    const user = await User.create({
+      email,
+      password: hashed,
+      verificationToken,
+      isVerified: false,
+    });
+
+    const previewUrl = await sendVerificationEmail(normalizedEmail, verificationToken);
+
+    res.status(201).json({
+      message: "Account created. Please check your email to verify your account.",
+      userId: user._id,
+      ...(previewUrl && { emailPreview: previewUrl }),
+    });
   } catch (error) {
     console.error("POST /api/auth/register error:", error.message);
     res.status(500).json({ message: "Registration failed." });
+  }
+});
+
+// GET /api/auth/verify-email
+router.get("/verify-email", async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({ message: "Verification token is required." });
+    }
+
+    const user = await User.findOne({ verificationToken: token });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired verification token." });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    await user.save();
+
+    res.redirect("http://localhost:8080/login?verified=true");
+  } catch (error) {
+    console.error("GET /api/auth/verify-email error:", error.message);
+    res.status(500).json({ message: "Email verification failed." });
+  }
+});
+
+// POST /api/auth/forgot-password
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    if (!user) {
+      return res.status(200).json({ message: "If that email exists, a reset link has been sent." });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000;
+    await user.save();
+
+    const previewUrl = await sendPasswordResetEmail(user.email, resetToken);
+
+    res.json({
+      message: "If that email exists, a reset link has been sent.",
+      ...(previewUrl && { emailPreview: previewUrl }),
+    });
+  } catch (error) {
+    console.error("POST /api/auth/forgot-password error:", error.message);
+    res.status(500).json({ message: "Failed to send reset email." });
+  }
+});
+
+// POST /api/auth/reset-password
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: "Token and new password are required." });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters." });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired reset token." });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    await ActivityLog.create({
+      user: user._id,
+      email: user.email,
+      action: "password_reset",
+    }).catch(() => {});
+
+    res.json({ message: "Password reset successfully." });
+  } catch (error) {
+    console.error("POST /api/auth/reset-password error:", error.message);
+    res.status(500).json({ message: "Failed to reset password." });
   }
 });
 
@@ -69,6 +177,10 @@ router.post("/login", async (req, res) => {
         action: "login_failed",
       }).catch(() => {});
       return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ message: "Please verify your email before logging in." });
     }
 
     await ActivityLog.create({
@@ -122,6 +234,7 @@ router.post("/agree-privacy", requireAuth, async (req, res) => {
     res.status(500).json({ message: "Failed to record privacy agreement." });
   }
 });
+
 // GET /api/auth/me
 router.get("/me", requireAuth, async (req, res) => {
   try {
@@ -173,4 +286,5 @@ router.put("/change-password", requireAuth, async (req, res) => {
     res.status(500).json({ message: "Failed to change password." });
   }
 });
+
 module.exports = router;
