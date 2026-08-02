@@ -10,14 +10,37 @@ const {
   validateQuerySpec,
 } = require("./querySpec.service");
 
-function optionsForQuery(query, partyCode = query.partyCodes[0] || "ALL") {
+function optionsForPeriod(
+  query,
+  beginningYear,
+  endingYear,
+  partyCode = query.partyCodes[0] || "ALL",
+) {
   return {
-    beginningYear: query.beginningYear,
-    endingYear: query.endingYear,
+    beginningYear,
+    endingYear,
     partyCode,
     metricMode: query.metric === "perCapitaAmount" ? "per_capita" : "total",
     boundarySet: query.boundarySet || undefined,
   };
+}
+
+function optionsForQuery(query, partyCode = query.partyCodes[0] || "ALL") {
+  return optionsForPeriod(
+    query,
+    query.beginningYear,
+    query.endingYear,
+    partyCode,
+  );
+}
+
+function normalizeName(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .trim()
+    .toLowerCase();
 }
 
 async function loadSingleRegion(query, partyCode) {
@@ -25,6 +48,19 @@ async function loadSingleRegion(query, partyCode) {
 
   if (query.regionLevel === "national") {
     return getNationalStats(options);
+  }
+
+  if (query.regionLevel === "riding" && !/^\d+$/.test(query.regionCode || "")) {
+    const ridingStats = await getRidingStatsForProvince(
+      query.provinceCode,
+      options,
+    );
+    const requestedRiding = normalizeName(query.regionCode);
+    return ridingStats.find((item) =>
+      [item.region?.code, item.region?.name]
+        .map(normalizeName)
+        .includes(requestedRiding),
+    ) || null;
   }
 
   return getRegionStats(query.regionLevel, query.regionCode, options);
@@ -146,15 +182,29 @@ function rankingRowsFromPartyStats(stats, query) {
   });
 }
 
-function sortAndLimitRanking(rows, limit) {
+function trendRowsFromStats(stats, query, series = null) {
+  return (stats?.donationsTrend || []).map((year) => ({
+    ...visibleRow(
+      series ? `${year.year} · ${series}` : String(year.year),
+      year,
+      query.metric,
+      privacyForDonorCount(year.donorCount),
+    ),
+    year: year.year,
+    series,
+  }));
+}
+
+function sortAndLimitRanking(rows, limit, sortOrder = "desc") {
   return [...rows]
     .sort((left, right) => {
       if (left.suppressed !== right.suppressed) {
         return left.suppressed ? 1 : -1;
       }
-      return Number(right.value || 0) - Number(left.value || 0);
+      const difference = Number(right.value || 0) - Number(left.value || 0);
+      return sortOrder === "asc" ? -difference : difference;
     })
-    .slice(0, Math.min(limit, 5));
+    .slice(0, Math.min(limit, 10));
 }
 
 async function executeRanking(query) {
@@ -169,32 +219,40 @@ async function executeRanking(query) {
       optionsForQuery(query),
     );
     rows = rankingRowsFromRegionStats(stats, query);
+  } else if (query.groupBy === "year") {
+    const stats = await loadSingleRegion(query);
+    rows = trendRowsFromStats(stats, query);
   } else {
     const stats = await loadSingleRegion(query, "ALL");
     rows = rankingRowsFromPartyStats(stats, query);
   }
 
-  const limitedRows = sortAndLimitRanking(rows, query.limit);
+  const limitedRows = sortAndLimitRanking(rows, query.limit, query.sortOrder);
   return responseFor(query, limitedRows, combinedPrivacy(limitedRows));
 }
 
 async function executeTrend(query) {
-  const stats = await loadSingleRegion(query);
-  if (!stats) return responseFor(query, [], normalizePrivacy(null, 0));
+  let rows;
 
-  const rows = (stats.donationsTrend || []).map((year) =>
-    visibleRow(
-      String(year.year),
-      year,
-      query.metric,
-      privacyForDonorCount(year.donorCount),
-    ),
-  );
+  if (query.partyCodes.length > 1) {
+    const statsByParty = await Promise.all(
+      query.partyCodes.map(async (partyCode) => ({
+        partyCode,
+        stats: await loadSingleRegion(query, partyCode),
+      })),
+    );
+    rows = statsByParty.flatMap(({ partyCode, stats }) =>
+      trendRowsFromStats(stats, query, partyCode),
+    );
+  } else {
+    const stats = await loadSingleRegion(query);
+    rows = trendRowsFromStats(stats, query);
+  }
 
   return responseFor(query, rows, combinedPrivacy(rows));
 }
 
-async function executeComparison(query) {
+async function executePartyComparison(query) {
   const statsByParty = await Promise.all(
     query.partyCodes.map(async (partyCode) => ({
       partyCode,
@@ -216,6 +274,178 @@ async function executeComparison(query) {
   return responseFor(query, rows, combinedPrivacy(rows));
 }
 
+async function executeProvinceComparison(query) {
+  const statsByProvince = await Promise.all(
+    query.regionCodes.map(async (regionCode) => ({
+      regionCode,
+      stats: await getRegionStats(
+        "province",
+        regionCode,
+        optionsForQuery(query),
+      ),
+    })),
+  );
+
+  const rows = statsByProvince.map(({ regionCode, stats }) =>
+    stats
+      ? visibleRow(
+          stats.region?.name || regionCode,
+          stats.totals,
+          query.metric,
+          stats.privacy,
+        )
+      : visibleRow(regionCode, null, query.metric, null),
+  );
+
+  return responseFor(query, rows, combinedPrivacy(rows));
+}
+
+async function executeYearComparison(query) {
+  const years = [query.beginningYear, query.endingYear];
+  const statsByYear = await Promise.all(
+    years.map(async (year) => ({
+      year,
+      stats: await loadSingleRegion({
+        ...query,
+        beginningYear: year,
+        endingYear: year,
+      }),
+    })),
+  );
+
+  const rows = statsByYear.map(({ year, stats }) =>
+    stats
+      ? visibleRow(String(year), stats.totals, query.metric, stats.privacy)
+      : visibleRow(String(year), null, query.metric, null),
+  );
+
+  return responseFor(query, rows, combinedPrivacy(rows));
+}
+
+async function executeComparison(query) {
+  if (query.groupBy === "province") {
+    return executeProvinceComparison(query);
+  }
+  if (query.groupBy === "year") {
+    return executeYearComparison(query);
+  }
+  return executePartyComparison(query);
+}
+
+function changeRow(label, startSource, endSource, metric, startPrivacy, endPrivacy) {
+  const normalizedStartPrivacy = normalizePrivacy(
+    startPrivacy,
+    startSource?.donorCount,
+  );
+  const normalizedEndPrivacy = normalizePrivacy(
+    endPrivacy,
+    endSource?.donorCount,
+  );
+  const suppressed =
+    normalizedStartPrivacy.isSuppressed || normalizedEndPrivacy.isSuppressed;
+  const startValue = suppressed ? null : metricValue(startSource, metric);
+  const endValue = suppressed ? null : metricValue(endSource, metric);
+
+  return {
+    label: label || "Unknown",
+    value: suppressed ? null : endValue - startValue,
+    startValue,
+    endValue,
+    suppressed,
+    suppressionReason: suppressed
+      ? normalizedStartPrivacy.reason || normalizedEndPrivacy.reason
+      : "",
+  };
+}
+
+function partySources(stats) {
+  const population = Number(stats?.totals?.population || 0);
+  return new Map((stats?.partyStats || []).map((party) => [
+    party.partyCode,
+    {
+      ...party,
+      averageDonation: metricValue(party, "averageDonation"),
+      perCapitaAmount: population
+        ? Number(party.totalDonations || 0) / population
+        : 0,
+    },
+  ]));
+}
+
+async function executePartyChange(query) {
+  const [startStats, endStats] = await Promise.all([
+    loadSingleRegion({
+      ...query,
+      beginningYear: query.beginningYear,
+      endingYear: query.beginningYear,
+    }, "ALL"),
+    loadSingleRegion({
+      ...query,
+      beginningYear: query.endingYear,
+      endingYear: query.endingYear,
+    }, "ALL"),
+  ]);
+  const startParties = partySources(startStats);
+  const endParties = partySources(endStats);
+  const partyCodes = query.partyCodes.length
+    ? query.partyCodes
+    : [...new Set([...startParties.keys(), ...endParties.keys()])];
+  const rows = partyCodes.map((partyCode) => {
+    const startParty = startParties.get(partyCode);
+    const endParty = endParties.get(partyCode);
+    return changeRow(
+      endParty?.partyName || startParty?.partyName || partyCode,
+      startParty,
+      endParty,
+      query.metric,
+      privacyForDonorCount(startParty?.donorCount),
+      privacyForDonorCount(endParty?.donorCount),
+    );
+  });
+  const limitedRows = sortAndLimitRanking(rows, query.limit, query.sortOrder);
+  return responseFor(query, limitedRows, combinedPrivacy(limitedRows));
+}
+
+async function executeProvinceChange(query) {
+  const [startStats, endStats] = await Promise.all([
+    getAllProvinceStats(optionsForPeriod(
+      query,
+      query.beginningYear,
+      query.beginningYear,
+    )),
+    getAllProvinceStats(optionsForPeriod(
+      query,
+      query.endingYear,
+      query.endingYear,
+    )),
+  ]);
+  const startByCode = new Map(startStats.map((item) => [item.region?.code, item]));
+  const endByCode = new Map(endStats.map((item) => [item.region?.code, item]));
+  const regionCodes = query.regionCodes.length
+    ? query.regionCodes
+    : [...new Set([...startByCode.keys(), ...endByCode.keys()])];
+  const rows = regionCodes.map((regionCode) => {
+    const start = startByCode.get(regionCode);
+    const end = endByCode.get(regionCode);
+    return changeRow(
+      end?.region?.name || start?.region?.name || regionCode,
+      start?.totals,
+      end?.totals,
+      query.metric,
+      start?.privacy,
+      end?.privacy,
+    );
+  });
+  const limitedRows = sortAndLimitRanking(rows, query.limit, query.sortOrder);
+  return responseFor(query, limitedRows, combinedPrivacy(limitedRows));
+}
+
+async function executeChange(query) {
+  return query.groupBy === "province"
+    ? executeProvinceChange(query)
+    : executePartyChange(query);
+}
+
 async function executeQuerySpec(input) {
   const query = validateQuerySpec(input);
 
@@ -228,6 +458,8 @@ async function executeQuerySpec(input) {
       return executeTrend(query);
     case "comparison":
       return executeComparison(query);
+    case "change":
+      return executeChange(query);
     default:
       throw new Error("Unsupported validated query intent.");
   }

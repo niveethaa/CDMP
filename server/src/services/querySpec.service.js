@@ -1,7 +1,7 @@
 const DATA_BEGINNING_YEAR = 1993;
 const DATA_ENDING_YEAR = 2024;
 
-const SUPPORTED_INTENTS = ["summary", "ranking", "trend", "comparison"];
+const SUPPORTED_INTENTS = ["summary", "ranking", "trend", "comparison", "change"];
 const SUPPORTED_METRICS = [
   "totalDonations",
   "donationCount",
@@ -10,6 +10,7 @@ const SUPPORTED_METRICS = [
   "perCapitaAmount",
 ];
 const SUPPORTED_GROUPS = [null, "party", "province", "riding", "year"];
+const SUPPORTED_SORT_ORDERS = ["desc", "asc"];
 const SUPPORTED_REGION_LEVELS = ["national", "province", "riding"];
 const SUPPORTED_PARTY_CODES = ["LPC", "CPC", "NDP", "BQ", "GPC", "PPC"];
 const SUPPORTED_PROVINCE_CODES = [
@@ -39,6 +40,7 @@ const ALLOWED_FIELDS = [
   "metric",
   "groupBy",
   "partyCodes",
+  "regionCodes",
   "regionLevel",
   "regionCode",
   "provinceCode",
@@ -46,6 +48,7 @@ const ALLOWED_FIELDS = [
   "endingYear",
   "boundarySet",
   "limit",
+  "sortOrder",
 ];
 
 class QuerySpecValidationError extends Error {
@@ -119,6 +122,7 @@ function validateQuerySpec(input) {
   const beginningYear = input.beginningYear ?? DATA_BEGINNING_YEAR;
   const endingYear = input.endingYear ?? DATA_ENDING_YEAR;
   const limit = input.limit ?? 5;
+  const sortOrder = input.sortOrder || "desc";
   const boundarySet = input.boundarySet || null;
   let regionCode = normalizeOptionalCode(input.regionCode);
   let provinceCode = normalizeOptionalCode(input.provinceCode);
@@ -134,6 +138,9 @@ function validateQuerySpec(input) {
   }
   if (!SUPPORTED_REGION_LEVELS.includes(regionLevel)) {
     errors.push(`Unsupported region level: ${String(regionLevel)}.`);
+  }
+  if (!SUPPORTED_SORT_ORDERS.includes(sortOrder)) {
+    errors.push(`Unsupported sort order: ${String(sortOrder)}.`);
   }
 
   let partyCodes = [];
@@ -152,6 +159,33 @@ function validateQuerySpec(input) {
       }
       if (new Set(partyCodes).size !== partyCodes.length) {
         errors.push("partyCodes cannot contain duplicates.");
+      }
+    }
+  }
+
+  if (partyCodes.length > 6) {
+    errors.push("partyCodes cannot contain more than six parties.");
+  }
+
+  let regionCodes = [];
+  if (input.regionCodes !== undefined) {
+    if (!Array.isArray(input.regionCodes)) {
+      errors.push("regionCodes must be an array.");
+    } else {
+      regionCodes = input.regionCodes.map((code) =>
+        String(code).trim().toUpperCase(),
+      );
+      const invalidRegionCodes = regionCodes.filter(
+        (code) => !SUPPORTED_PROVINCE_CODES.includes(code),
+      );
+      if (invalidRegionCodes.length) {
+        errors.push(`Unsupported region code: ${invalidRegionCodes.join(", ")}.`);
+      }
+      if (new Set(regionCodes).size !== regionCodes.length) {
+        errors.push("regionCodes cannot contain duplicates.");
+      }
+      if (regionCodes.length > 10) {
+        errors.push("regionCodes cannot contain more than ten provinces.");
       }
     }
   }
@@ -182,8 +216,18 @@ function validateQuerySpec(input) {
     errors.push("beginningYear cannot be after endingYear.");
   }
 
-  if (!Number.isInteger(limit) || limit < 1 || limit > 5) {
-    errors.push("limit must be an integer between 1 and 5.");
+  if (!Number.isInteger(limit) || limit < 1 || limit > 10) {
+    errors.push("limit must be an integer between 1 and 10.");
+  }
+
+  const isProvinceCollection =
+    groupBy === "province"
+    && ["ranking", "comparison", "change"].includes(intent);
+
+  if (isProvinceCollection) {
+    regionLevel = "province";
+    regionCode = null;
+    provinceCode = null;
   }
 
   if (regionLevel === "national") {
@@ -238,21 +282,62 @@ function validateQuerySpec(input) {
   if (intent === "summary" && groupBy !== null) {
     errors.push("Summary queries cannot use groupBy.");
   }
-  if (intent === "comparison") {
-    if (partyCodes.length !== 2) {
-      errors.push("Comparison queries require exactly two party codes.");
-    }
-    if (groupBy !== "party") {
-      errors.push("Comparison queries must group by party.");
-    }
-  } else if (partyCodes.length > 1) {
-    errors.push("Only comparison queries can include multiple party codes.");
+  if (intent === "summary" && partyCodes.length > 1) {
+    errors.push("Summary queries can include at most one party code.");
   }
-  if (intent === "ranking" && groupBy === "province") {
-    regionLevel = "province";
-    regionCode = null;
-    provinceCode = null;
-  } else if (regionLevel === "province" && !regionCode) {
+  if (intent === "comparison") {
+    if (groupBy === "party") {
+      if (partyCodes.length < 2 || partyCodes.length > 6) {
+        errors.push("Party comparisons require between two and six party codes.");
+      }
+      if (regionCodes.length) {
+        errors.push("Party comparisons cannot include regionCodes.");
+      }
+    } else if (groupBy === "province") {
+      if (regionCodes.length < 2) {
+        errors.push("Province comparisons require at least two regionCodes.");
+      }
+      if (partyCodes.length > 1) {
+        errors.push("Province comparisons can include at most one party code.");
+      }
+    } else if (groupBy === "year") {
+      if (beginningYear === endingYear) {
+        errors.push("Year comparisons require two different years.");
+      }
+      if (partyCodes.length > 1) {
+        errors.push("Year comparisons can include at most one party code.");
+      }
+      if (regionCodes.length) {
+        errors.push("Year comparisons cannot include regionCodes.");
+      }
+    } else {
+      errors.push("Comparisons must group by party, province, or year.");
+    }
+  }
+  if (intent === "ranking" && partyCodes.length > 1) {
+    errors.push("Ranking queries can include at most one party code.");
+  }
+  if (intent === "trend" && partyCodes.length > 6) {
+    errors.push("Trend queries can include at most six party codes.");
+  }
+  if (intent === "change") {
+    if (!["party", "province"].includes(groupBy)) {
+      errors.push("Change queries must group by party or province.");
+    }
+    if (groupBy === "province" && partyCodes.length > 1) {
+      errors.push("Province change queries can include at most one party code.");
+    }
+    if (beginningYear === endingYear) {
+      errors.push("Change queries require two different years.");
+    }
+  }
+  if (!["comparison", "change"].includes(intent) && regionCodes.length) {
+    errors.push("regionCodes are only supported for province comparisons and changes.");
+  }
+  if (intent === "change" && groupBy !== "province" && regionCodes.length) {
+    errors.push("regionCodes are only supported for province change queries.");
+  }
+  if (regionLevel === "province" && !regionCode && !isProvinceCollection) {
     errors.push("Province queries require a province code.");
   }
   if (intent === "ranking" && groupBy === "riding") {
@@ -261,8 +346,8 @@ function validateQuerySpec(input) {
     }
     regionCode = null;
   }
-  if (intent === "ranking" && !["party", "province", "riding"].includes(groupBy)) {
-    errors.push("Ranking queries must group by party, province, or riding.");
+  if (intent === "ranking" && !["party", "province", "riding", "year"].includes(groupBy)) {
+    errors.push("Ranking queries must group by party, province, riding, or year.");
   }
 
   if (errors.length) {
@@ -274,6 +359,7 @@ function validateQuerySpec(input) {
     metric,
     groupBy,
     partyCodes: Object.freeze([...partyCodes]),
+    regionCodes: Object.freeze([...regionCodes]),
     regionLevel,
     regionCode,
     provinceCode,
@@ -281,6 +367,7 @@ function validateQuerySpec(input) {
     endingYear,
     boundarySet,
     limit,
+    sortOrder,
   });
 }
 
@@ -296,5 +383,6 @@ module.exports = {
   SUPPORTED_PARTY_CODES,
   SUPPORTED_PROVINCE_CODES,
   SUPPORTED_REGION_LEVELS,
+  SUPPORTED_SORT_ORDERS,
   validateQuerySpec,
 };

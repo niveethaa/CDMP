@@ -30,6 +30,11 @@ the application at `http://localhost:8080`. The map and research features can
 run without an AI key; Ask CDMP requires one. A fresh database also needs the
 MongoDB dump restore described in [DOCKER.md](./DOCKER.md).
 
+Ask CDMP can answer aggregate summaries, top or bottom ten rankings, year and
+multi-party trends, comparisons across parties, provinces, or years, and party
+or province changes between two years. Individual donor data and raw database
+requests remain outside the feature.
+
 See [server/README.md](./server/README.md) for complete provider examples and
 local backend setup, [client/README.md](./client/README.md) for frontend setup,
 and [DOCKER.md](./DOCKER.md) for database restore and Docker handoff steps.

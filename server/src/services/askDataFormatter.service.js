@@ -14,9 +14,15 @@ const METRIC_LABELS = Object.freeze({
 
 function formatDollars(value) {
   const amount = Number(value || 0);
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
-  return `$${amount.toFixed(0)}`;
+  const sign = amount < 0 ? "-" : "";
+  const absoluteAmount = Math.abs(amount);
+  if (absoluteAmount >= 1_000_000) {
+    return `${sign}$${(absoluteAmount / 1_000_000).toFixed(1)}M`;
+  }
+  if (absoluteAmount >= 1_000) {
+    return `${sign}$${(absoluteAmount / 1_000).toFixed(0)}K`;
+  }
+  return `${sign}$${absoluteAmount.toFixed(0)}`;
 }
 
 function formatNumber(value) {
@@ -66,19 +72,30 @@ function formatRanking(query, rows) {
   const [top, ...rest] = visible;
   const label = metricLabel(query.metric);
   const period = periodLabel(query.beginningYear, query.endingYear);
+  const direction = query.sortOrder === "asc" ? "lowest" : "highest";
   if (!rest.length) {
-    return `${top.label} had the highest ${label} with ${formatValue(top.value, query.metric)} between ${period}.`;
+    return `${top.label} had the ${direction} ${label} with ${formatValue(top.value, query.metric)} between ${period}.`;
   }
   const others = rest
     .map((row) => `${row.label} (${formatValue(row.value, query.metric)})`)
     .join(", ");
-  return `${top.label} had the highest ${label} with ${formatValue(top.value, query.metric)} between ${period}, followed by ${others}.`;
+  return `${top.label} had the ${direction} ${label} with ${formatValue(top.value, query.metric)} between ${period}, followed by ${others}.`;
 }
 
 function formatTrend(query, rows) {
   if (!rows.length) return noDataMessage();
   const visible = visibleRows(rows);
   if (!visible.length) return suppressedMessage();
+  const seriesNames = [...new Set(visible.map((row) => row.series).filter(Boolean))];
+  if (seriesNames.length) {
+    const label = metricLabel(query.metric);
+    return seriesNames.map((series) => {
+      const seriesRows = visible.filter((row) => row.series === series);
+      const first = seriesRows[0];
+      const last = seriesRows[seriesRows.length - 1];
+      return `${series} ${label} went from ${formatValue(first.value, query.metric)} in ${first.year} to ${formatValue(last.value, query.metric)} in ${last.year}.`;
+    }).join(" ");
+  }
   const first = visible[0];
   const last = visible[visible.length - 1];
   const label = metricLabel(query.metric);
@@ -91,10 +108,38 @@ function formatComparison(query, rows) {
   if (!visible.length) return suppressedMessage();
   const label = metricLabel(query.metric);
   const period = periodLabel(query.beginningYear, query.endingYear);
-  const parts = visible
-    .map((row) => `${row.label} had ${formatValue(row.value, query.metric)}`)
-    .join(" while ");
+  const values = visible.map(
+    (row) => `${row.label} had ${formatValue(row.value, query.metric)}`,
+  );
+  const parts = values.length === 1
+    ? values[0]
+    : `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
   return `Between ${period}, ${parts} in ${label}.`;
+}
+
+function describeChange(row, metric) {
+  const amount = Number(row.value || 0);
+  const direction = amount >= 0 ? "increased" : "decreased";
+  return `${row.label} ${direction} by ${formatValue(Math.abs(amount), metric)}`;
+}
+
+function formatChange(query, rows) {
+  if (!rows.length) return noDataMessage();
+  const visible = visibleRows(rows);
+  if (!visible.length) return suppressedMessage();
+  const period = periodLabel(query.beginningYear, query.endingYear);
+  const descriptions = visible.map((row) => describeChange(row, query.metric));
+  const result = descriptions.length === 1
+    ? descriptions[0]
+    : `${descriptions.slice(0, -1).join(", ")}, and ${descriptions.at(-1)}`;
+  const groupLabel = query.groupBy === "province" ? "province" : "party";
+  if (query.sortOrder === "desc" && Number(visible[0].value) < 0) {
+    return `No ${groupLabel} increased between ${period}. The smallest decreases were: ${result}.`;
+  }
+  if (query.sortOrder === "asc" && Number(visible[0].value) > 0) {
+    return `No ${groupLabel} decreased between ${period}. The smallest increases were: ${result}.`;
+  }
+  return `Between ${period}, ${result} in ${metricLabel(query.metric)}.`;
 }
 
 function formatAnswer(query, rows) {
@@ -107,6 +152,8 @@ function formatAnswer(query, rows) {
       return formatTrend(query, rows);
     case "comparison":
       return formatComparison(query, rows);
+    case "change":
+      return formatChange(query, rows);
     default:
       return "The question could not be answered.";
   }

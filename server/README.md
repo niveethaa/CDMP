@@ -113,6 +113,18 @@ A successful response contains `answer`, `query`, `data`,
 `interpretedFilters`, and `coverage`. An AI service error usually means the
 provider configuration, key, model, network access, or timeout needs attention.
 
+Ask CDMP supports aggregate questions including:
+
+- summaries by party, province, riding, and year range
+- top or bottom rankings of up to ten parties, provinces, ridings, or years
+- comparisons across two to six parties, two to ten provinces, or two years
+- single-party and multi-party donation trends
+- party and province donation changes between two endpoint years
+- total amount, donation count, donor count, average donation, and per-capita metrics
+
+Questions requesting individual donor records, raw database access, multiple
+metrics in one answer, or operations that change data are not supported.
+
 ## Tests
 
 The automated tests mock MongoDB and provider calls, so they do not spend AI
