@@ -73,6 +73,8 @@ describe("Ask Data natural-language interpreter", () => {
     expect(prompt).toContain("A summary asks for one aggregate value");
     expect(prompt).toContain("A single named province always uses regionLevel province");
     expect(prompt).toContain("copy every unchanged field from previousQuery");
+    expect(prompt).toContain("All-party comparisons use all six party codes");
+    expect(prompt).toContain("A trend for all, every, or each party as separate series");
   });
 
   it("accepts and normalizes a party ranking", async () => {
@@ -228,6 +230,61 @@ describe("Ask Data natural-language interpreter", () => {
       provinceCode: "BC",
       limit: 1,
     });
+  });
+
+  it("canonicalizes implicit all-party comparisons and trends", () => {
+    const comparison = canonicalizeModelQuerySpec({
+      intent: "comparison",
+      groupBy: "party",
+      partyCodes: ["CPC"],
+    }, "Compare Conservative donations with every other party.");
+    const trend = canonicalizeModelQuerySpec({
+      intent: "trend",
+      groupBy: "year",
+      partyCodes: [],
+    }, "Show donation trends for all parties.");
+
+    expect(comparison.partyCodes).toEqual(["LPC", "CPC", "NDP", "BQ", "GPC", "PPC"]);
+    expect(trend.partyCodes).toEqual(["LPC", "CPC", "NDP", "BQ", "GPC", "PPC"]);
+  });
+
+  it("recovers a safe all-party QuerySpec when the model contradicts itself", async () => {
+    const provider = {
+      generateJson: jest.fn().mockResolvedValue(JSON.stringify({
+        supported: false,
+        querySpec: {
+          intent: "comparison",
+          metric: "totalDonations",
+          groupBy: "party",
+          partyCodes: ["CPC"],
+          regionCodes: [],
+          regionLevel: "province",
+          regionCode: "ON",
+          provinceCode: "ON",
+          beginningYear: 2023,
+          endingYear: 2023,
+          boundarySet: null,
+          limit: 2,
+          sortOrder: "desc",
+        },
+      })),
+    };
+
+    const result = await interpretQuestion({
+      question: "Compare all parties and Conservative donations in Ontario in 2023.",
+    }, { provider });
+
+    expect(result).toMatchObject({
+      supported: true,
+      querySpec: {
+        partyCodes: ["LPC", "CPC", "NDP", "BQ", "GPC", "PPC"],
+      },
+    });
+    const context = JSON.parse(provider.generateJson.mock.calls[0][0].userPrompt);
+    expect(context.question).toBe(
+      "Compare all six parties donations in Ontario in 2023.",
+    );
+    expect(context.partyCollection.codes).toEqual(["LPC", "CPC", "NDP", "BQ", "GPC", "PPC"]);
   });
 
   it("includes safe context but excludes unrelated or donor data", async () => {
