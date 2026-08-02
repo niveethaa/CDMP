@@ -118,7 +118,8 @@ function getPartyRows(doc, partyCode) {
 
   if (partyCode === "ALL") return rows;
 
-  return rows.filter((party) => party.partyCode === partyCode);
+  const codes = String(partyCode).split(",").map((c) => c.trim()).filter(Boolean);
+  return rows.filter((party) => codes.includes(party.partyCode));
 }
 
 function totalsForDocument(doc, partyCode, metricMode) {
