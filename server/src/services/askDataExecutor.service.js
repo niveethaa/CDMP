@@ -100,16 +100,58 @@ function normalizePrivacy(privacy, fallbackDonorCount = 0) {
 
 function visibleRow(label, source, metric, privacy) {
   const normalizedPrivacy = normalizePrivacy(privacy, source?.donorCount);
+  const unavailable =
+    metric === "perCapitaAmount"
+    && Number(source?.population || 0) <= 0;
+  const unavailableReason = unavailable
+    ? "Population data is unavailable for this selection."
+    : "";
 
   return {
     label: label || "Unknown",
-    value: normalizedPrivacy.isSuppressed ? null : metricValue(source, metric),
+    value: normalizedPrivacy.isSuppressed || unavailable
+      ? null
+      : metricValue(source, metric),
     suppressed: normalizedPrivacy.isSuppressed,
     suppressionReason: normalizedPrivacy.reason,
+    unavailable,
+    unavailableReason,
   };
 }
 
+function coverageNotes(query) {
+  const notes = [];
+  const selectedParties = query.partyCodes || [];
+  const includesAllParties = selectedParties.length === 0;
+  if (
+    query.beginningYear <= 2020
+    && query.endingYear >= 2020
+    && (includesAllParties || selectedParties.includes("CPC"))
+  ) {
+    notes.push("The imported 2020 data does not include Conservative Party records.");
+  }
+  if (
+    query.beginningYear <= 2021
+    && query.endingYear >= 2021
+    && (includesAllParties || selectedParties.includes("LPC"))
+  ) {
+    notes.push("The imported 2021 data does not include Liberal Party records.");
+  }
+  if (
+    query.beginningYear <= 2024
+    && query.endingYear >= 2024
+    && (includesAllParties || selectedParties.some((code) => code !== "BQ"))
+  ) {
+    notes.push("The imported 2024 data currently includes Bloc Québécois records only.");
+  }
+  if (query.metric === "perCapitaAmount") {
+    notes.push("Population data is unavailable, so per-capita values cannot be calculated.");
+  }
+  return notes;
+}
+
 function responseFor(query, rows, privacy) {
+  const notes = coverageNotes(query);
   return {
     query,
     columns: ["label", query.metric],
@@ -118,6 +160,8 @@ function responseFor(query, rows, privacy) {
     coverage: {
       beginningYear: DATA_BEGINNING_YEAR,
       endingYear: DATA_ENDING_YEAR,
+      isComplete: notes.length === 0,
+      notes,
     },
   };
 }
@@ -172,6 +216,7 @@ function rankingRowsFromPartyStats(stats, query) {
       perCapitaAmount: population
         ? Number(party.totalDonations || 0) / population
         : 0,
+      population,
     };
     return visibleRow(
       party.partyName || party.partyCode,
@@ -343,17 +388,25 @@ function changeRow(label, startSource, endSource, metric, startPrivacy, endPriva
   );
   const suppressed =
     normalizedStartPrivacy.isSuppressed || normalizedEndPrivacy.isSuppressed;
-  const startValue = suppressed ? null : metricValue(startSource, metric);
-  const endValue = suppressed ? null : metricValue(endSource, metric);
+  const unavailable = metric === "perCapitaAmount" && (
+    Number(startSource?.population || 0) <= 0
+    || Number(endSource?.population || 0) <= 0
+  );
+  const startValue = suppressed || unavailable ? null : metricValue(startSource, metric);
+  const endValue = suppressed || unavailable ? null : metricValue(endSource, metric);
 
   return {
     label: label || "Unknown",
-    value: suppressed ? null : endValue - startValue,
+    value: suppressed || unavailable ? null : endValue - startValue,
     startValue,
     endValue,
     suppressed,
     suppressionReason: suppressed
       ? normalizedStartPrivacy.reason || normalizedEndPrivacy.reason
+      : "",
+    unavailable,
+    unavailableReason: unavailable
+      ? "Population data is unavailable for this selection."
       : "",
   };
 }
@@ -368,6 +421,7 @@ function partySources(stats) {
       perCapitaAmount: population
         ? Number(party.totalDonations || 0) / population
         : 0,
+      population,
     },
   ]));
 }

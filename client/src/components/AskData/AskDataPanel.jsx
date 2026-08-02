@@ -83,7 +83,7 @@ function AnswerCard({ result, onApplyFilters, onSuggestionClick }) {
 
     let topProvinceCode = provinceCode;
     if (!topProvinceCode && result.interpretedFilters.groupBy === "province" && result.data?.rows?.length) {
-      const topRow = result.data.rows.find((row) => !row.suppressed);
+      const topRow = result.data.rows.find((row) => !row.suppressed && !row.unavailable);
       if (topRow) topProvinceCode = PROVINCE_CODES[topRow.label] || null;
     }
 
@@ -99,9 +99,12 @@ function AnswerCard({ result, onApplyFilters, onSuggestionClick }) {
       )}
 
       {result.coverage && (
-        <p className="ask-coverage">
-          Data coverage: {result.coverage.beginningYear}–{result.coverage.endingYear}
-        </p>
+        <div className="ask-coverage">
+          <p>Data coverage: {result.coverage.beginningYear}–{result.coverage.endingYear}</p>
+          {result.coverage.notes?.map((note) => (
+            <p key={note}>{note}</p>
+          ))}
+        </div>
       )}
 
       {result.data && result.data.rows && result.data.rows.length > 0 && (
@@ -110,7 +113,7 @@ function AnswerCard({ result, onApplyFilters, onSuggestionClick }) {
             <div key={i} className="ask-data-row">
               <span className="ask-data-label">{row.label}</span>
               <span className="ask-data-value">
-                {row.suppressed ? "—" : formatRowValue(row.value, result.interpretedFilters?.metric)}
+                {row.suppressed || row.unavailable ? "—" : formatRowValue(row.value, result.interpretedFilters?.metric)}
               </span>
             </div>
           ))}

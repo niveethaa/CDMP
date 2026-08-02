@@ -35,6 +35,11 @@ multi-party trends, comparisons across parties, provinces, or years, and party
 or province changes between two years. Individual donor data and raw database
 requests remain outside the feature.
 
+Ask CDMP displays coverage warnings for known gaps in the imported data: CPC
+records are absent in 2020, LPC records are absent in 2021, and the current 2024
+import contains BQ records only. Population values are not loaded, so
+per-capita answers are shown as unavailable rather than zero.
+
 See [server/README.md](./server/README.md) for complete provider examples and
 local backend setup, [client/README.md](./client/README.md) for frontend setup,
 and [DOCKER.md](./DOCKER.md) for database restore and Docker handoff steps.
