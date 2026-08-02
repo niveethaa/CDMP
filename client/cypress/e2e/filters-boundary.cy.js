@@ -23,7 +23,7 @@ describe("Filters and boundary buckets (UC2)", () => {
     cy.contains("button", "Filters").click();
     cy.contains(/Riding View Uses Boundary Buckets/i).should("exist");
     // The three data-bearing maps are shown as options
-    cy.contains(".boundary-option", /1993–2003/).should("exist");
+    cy.contains(".boundary-option", /1997–2003/).should("exist");
     cy.contains(".boundary-option", /2004–2014/).should("exist");
     cy.contains(".boundary-option", /2015–2024/).should("exist");
   });
@@ -41,11 +41,11 @@ describe("Filters and boundary buckets (UC2)", () => {
   it("switches boundary bucket and updates the year-range chip", () => {
     drillIntoOntario();
     cy.contains("button", "Filters").click();
-    // Select the 1993–2003 (1996 map) bucket
-    cy.contains(".boundary-option", /1993–2003/).click();
+    // Select the 1997–2003 (1996 map) bucket
+    cy.contains(".boundary-option", /1997–2003/).click();
     cy.contains(".filters-btn", /Apply/i).click();
-    // Year chip should now reflect 1993–2003
-    cy.contains(".active-filter-chip", /1993–2003/).should("exist");
+    // Year chip should now reflect 1997–2003
+    cy.contains(".active-filter-chip", /1997–2003/).should("exist");
     // And the boundary-set short label chip updates to the 1996 map
     cy.contains(".active-filter-chip", /1996 Map/).should("exist");
   });
