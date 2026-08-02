@@ -20,6 +20,7 @@ function stats({
   totalDonations = 1000,
   donationCount = 10,
   donorCount = 8,
+  population = 500,
   suppressed = false,
 } = {}) {
   return {
@@ -29,8 +30,8 @@ function stats({
       donationCount,
       donorCount,
       averageDonation: donationCount ? totalDonations / donationCount : 0,
-      perCapitaAmount: 2,
-      population: 500,
+      perCapitaAmount: population ? totalDonations / population : 0,
+      population,
     },
     partyStats: [],
     donationsTrend: [],
@@ -356,6 +357,63 @@ describe("Ask Data QuerySpec executor", () => {
       suppressionReason: "Below threshold.",
     });
     expect(result.privacy.isSuppressed).toBe(true);
+  });
+
+  it("marks per-capita results unavailable when population is missing", async () => {
+    regionStats.getRegionStats.mockResolvedValue(stats({ population: 0 }));
+
+    const result = await executeQuerySpec(summaryQuery({
+      metric: "perCapitaAmount",
+      beginningYear: 2022,
+      endingYear: 2023,
+    }));
+
+    expect(result.rows[0]).toMatchObject({
+      value: null,
+      suppressed: false,
+      unavailable: true,
+      unavailableReason: "Population data is unavailable for this selection.",
+    });
+    expect(result.coverage).toMatchObject({
+      isComplete: false,
+      notes: ["Population data is unavailable, so per-capita values cannot be calculated."],
+    });
+  });
+
+  it("reports known gaps in the imported party-year data", async () => {
+    regionStats.getRegionStats.mockResolvedValue(stats());
+
+    const result = await executeQuerySpec(summaryQuery({
+      partyCodes: [],
+      beginningYear: 2020,
+      endingYear: 2024,
+    }));
+
+    expect(result.coverage).toEqual({
+      beginningYear: 1993,
+      endingYear: 2024,
+      isComplete: false,
+      notes: [
+        "The imported 2020 data does not include Conservative Party records.",
+        "The imported 2021 data does not include Liberal Party records.",
+        "The imported 2024 data currently includes Bloc Québécois records only.",
+      ],
+    });
+  });
+
+  it("does not report a party gap that cannot affect the selected party", async () => {
+    regionStats.getRegionStats.mockResolvedValue(stats());
+
+    const result = await executeQuerySpec(summaryQuery({
+      partyCodes: ["LPC"],
+      beginningYear: 2020,
+      endingYear: 2020,
+    }));
+
+    expect(result.coverage).toMatchObject({
+      isComplete: true,
+      notes: [],
+    });
   });
 
   it("uses the riding aggregate service with boundary options", async () => {
