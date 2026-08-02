@@ -1,6 +1,7 @@
 const {
   AskDataInterpreterError,
   buildSystemPrompt,
+  canonicalizeModelQuerySpec,
   interpretQuestion,
   sanitizeMapFilters,
 } = require("../src/services/askDataInterpreter.service");
@@ -69,6 +70,9 @@ describe("Ask Data natural-language interpreter", () => {
     expect(prompt).toContain("A province comparison uses groupBy province");
     expect(prompt).toContain("uses intent change, groupBy party or province");
     expect(prompt).toContain("Never silently omit or replace one");
+    expect(prompt).toContain("A summary asks for one aggregate value");
+    expect(prompt).toContain("A single named province always uses regionLevel province");
+    expect(prompt).toContain("copy every unchanged field from previousQuery");
   });
 
   it("accepts and normalizes a party ranking", async () => {
@@ -204,6 +208,25 @@ describe("Ask Data natural-language interpreter", () => {
     ).resolves.toMatchObject({
       supported: true,
       querySpec: { intent: "change", groupBy: "party" },
+    });
+  });
+
+  it("canonicalizes safe single-province model output mistakes", () => {
+    expect(canonicalizeModelQuerySpec({
+      intent: "summary",
+      groupBy: "party",
+      partyCodes: ["NDP"],
+      regionCodes: ["BC"],
+      regionLevel: "province",
+      regionCode: null,
+      provinceCode: "BC",
+      limit: 5,
+    })).toMatchObject({
+      groupBy: null,
+      regionCodes: [],
+      regionCode: "BC",
+      provinceCode: "BC",
+      limit: 1,
     });
   });
 
