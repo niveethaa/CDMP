@@ -219,14 +219,6 @@ export default function AskDataPanel({ currentFilters, onApplyFilters, onClearFi
     if (onClearFilters) onClearFilters();
   }
 
-  function handleClear() {
-    setQuestion("");
-    setResult(null);
-    setError(null);
-    setUnsupported(false);
-    if (onClearFilters) onClearFilters();
-  }
-
   return (
     <div className="ask-panel" ref={panelRef}>
       <div className="ask-panel-header">
