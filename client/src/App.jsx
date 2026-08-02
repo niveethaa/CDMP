@@ -6,6 +6,8 @@ import PrivacyAgreement from "./pages/PrivacyAgreement";
 import Dashboard from "./pages/Dashboard";
 import AccessDenied from "./pages/AccessDenied";
 import Account from "./pages/Account";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import ErrorBoundary from "./components/ErrorBoundaryComponent";
 import "./App.css";
 
@@ -21,6 +23,8 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/access-denied" element={<AccessDenied />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
