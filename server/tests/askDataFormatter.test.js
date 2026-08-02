@@ -37,6 +37,19 @@ describe("Ask Data answer formatter", () => {
     expect(answer).toContain("LPC had $900, CPC had $700, and NDP had $500");
   });
 
+  it("mentions partially suppressed comparison results", () => {
+    const answer = formatAnswer(
+      query({ intent: "comparison" }),
+      [
+        { label: "LPC", value: 900, suppressed: false },
+        { label: "BQ", value: null, suppressed: true },
+      ],
+    );
+
+    expect(answer).toContain("LPC had $900");
+    expect(answer).toContain("Some requested results were omitted");
+  });
+
   it("formats multi-party trends by series", () => {
     const answer = formatAnswer(
       query({ intent: "trend", groupBy: "year" }),

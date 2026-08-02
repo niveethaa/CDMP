@@ -138,6 +138,25 @@ function sanitizeMapFilters(filters) {
   return Object.keys(safeFilters).length ? safeFilters : null;
 }
 
+function requestsAllPartyCollection(question) {
+  const normalized = String(question || "").toLowerCase();
+  return [
+    /\ball\s+(?:six\s+)?part(?:y|ies)\b/,
+    /\b(?:every|each)\s+(?:other\s+)?part(?:y|ies)\b/,
+    /\ball\s+other\s+part(?:y|ies)\b/,
+    /\bby\s+part(?:y|ies)\b/,
+    /\bparties\s+(?:side\s+by\s+side|stack\s+up)\b/,
+    /\b(?:versus|with|against)\s+the\s+rest\b/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
+function normalizeQuestionForModel(question) {
+  return String(question || "").replace(
+    /\ball\s+parties\s+and\s+(?:the\s+)?(?:liberal|liberals|conservative|conservatives|ndp|bloc(?:\s+québécois)?|green|greens|people(?:'s)?\s+party)\b/gi,
+    "all six parties",
+  );
+}
+
 function buildSystemPrompt() {
   return [
     "You translate questions about CDMP political donation aggregates into JSON.",
@@ -164,9 +183,11 @@ function buildSystemPrompt() {
     "regionCodes is only for selecting multiple provinces in a province comparison or selecting provinces in a province change query. Never put a single-province filter in regionCodes.",
     "Preserve every party, province, metric, year, ranking direction, and requested result count named by the user. Never silently omit or replace one.",
     "A party comparison uses two through six partyCodes and groupBy party.",
+    `All-party comparisons use all six party codes: ${SUPPORTED_PARTY_CODES.join(", ")}. This includes phrases such as all parties, every party, each party, by party, side by side, stack up, or one party versus the rest. Never use an empty or one-item partyCodes array for a party comparison.`,
     "A province comparison uses groupBy province, two through ten regionCodes, and at most one partyCode.",
     "A comparison between two years uses groupBy year with the first year as beginningYear and the second year as endingYear.",
     "A trend uses groupBy year and may include zero through six partyCodes.",
+    `A trend for all, every, or each party as separate series uses all six party codes: ${SUPPORTED_PARTY_CODES.join(", ")}. An overall or total trend across all parties uses an empty partyCodes array.`,
     "A change question asking which party or province increased or decreased most uses intent change, groupBy party or province, and the two endpoint years.",
     "A ranking of the highest, most, top, best, greatest, biggest, or largest values uses sortOrder desc. A ranking of the lowest, least, bottom, worst, or smallest values uses sortOrder asc.",
     "A question asking which year had the highest or lowest value uses intent ranking and groupBy year.",
@@ -185,12 +206,15 @@ function buildSystemPrompt() {
     'Example: "List the two parties with the smallest average gift nationwide in 2021" uses {"intent":"ranking","metric":"averageDonation","groupBy":"party","partyCodes":[],"regionCodes":[],"regionLevel":"national","regionCode":null,"provinceCode":null,"beginningYear":2021,"endingYear":2021,"boundarySet":null,"limit":2,"sortOrder":"asc"}.',
     'Example: "Show Canada four worst fundraising years from 2015 through 2023" uses {"intent":"ranking","metric":"totalDonations","groupBy":"year","partyCodes":[],"regionCodes":[],"regionLevel":"national","regionCode":null,"provinceCode":null,"beginningYear":2015,"endingYear":2023,"boundarySet":null,"limit":4,"sortOrder":"asc"}.',
     'Example: "Compare Liberal, Conservative, and NDP donations in Ontario in 2023" uses {"intent":"comparison","metric":"totalDonations","groupBy":"party","partyCodes":["LPC","CPC","NDP"],"regionCodes":[],"regionLevel":"province","regionCode":"ON","provinceCode":"ON","beginningYear":2023,"endingYear":2023,"boundarySet":null,"limit":3,"sortOrder":"desc"}.',
+    'Example: "Compare all parties donations in Ontario in 2023" uses {"intent":"comparison","metric":"totalDonations","groupBy":"party","partyCodes":["LPC","CPC","NDP","BQ","GPC","PPC"],"regionCodes":[],"regionLevel":"province","regionCode":"ON","provinceCode":"ON","beginningYear":2023,"endingYear":2023,"boundarySet":null,"limit":6,"sortOrder":"desc"}.',
+    'Example: "Compare Conservative donations with every other party in Ontario in 2023" uses {"intent":"comparison","metric":"totalDonations","groupBy":"party","partyCodes":["LPC","CPC","NDP","BQ","GPC","PPC"],"regionCodes":[],"regionLevel":"province","regionCode":"ON","provinceCode":"ON","beginningYear":2023,"endingYear":2023,"boundarySet":null,"limit":6,"sortOrder":"desc"}.',
     'Example: "Compare average donations for Liberal, Conservative, NDP, Bloc, Green, and People Party nationwide in 2021" uses {"intent":"comparison","metric":"averageDonation","groupBy":"party","partyCodes":["LPC","CPC","NDP","BQ","GPC","PPC"],"regionCodes":[],"regionLevel":"national","regionCode":null,"provinceCode":null,"beginningYear":2021,"endingYear":2021,"boundarySet":null,"limit":6,"sortOrder":"desc"}.',
     'Example: "Compare donations in Alberta and British Columbia in 2023" uses {"intent":"comparison","metric":"totalDonations","groupBy":"province","partyCodes":[],"regionCodes":["AB","BC"],"regionLevel":"province","regionCode":null,"provinceCode":null,"beginningYear":2023,"endingYear":2023,"boundarySet":null,"limit":2,"sortOrder":"desc"}.',
     'Example: "Compare total donations in Ontario in 2019 and 2023" uses {"intent":"comparison","metric":"totalDonations","groupBy":"year","partyCodes":[],"regionCodes":[],"regionLevel":"province","regionCode":"ON","provinceCode":"ON","beginningYear":2019,"endingYear":2023,"boundarySet":null,"limit":2,"sortOrder":"desc"}.',
     'Example: "Compare Liberal donations in Ontario in 2019 and 2023" uses {"intent":"comparison","metric":"totalDonations","groupBy":"year","partyCodes":["LPC"],"regionCodes":[],"regionLevel":"province","regionCode":"ON","provinceCode":"ON","beginningYear":2019,"endingYear":2023,"boundarySet":null,"limit":2,"sortOrder":"desc"}.',
     'Example: "Show the NDP donation trend in British Columbia from 2018 to 2023" uses {"intent":"trend","metric":"totalDonations","groupBy":"year","partyCodes":["NDP"],"regionCodes":[],"regionLevel":"province","regionCode":"BC","provinceCode":"BC","beginningYear":2018,"endingYear":2023,"boundarySet":null,"limit":6,"sortOrder":"asc"}.',
     'Example: "Plot Liberal, Conservative, and NDP fundraising in British Columbia from 2020 to 2023" uses {"intent":"trend","metric":"totalDonations","groupBy":"year","partyCodes":["LPC","CPC","NDP"],"regionCodes":[],"regionLevel":"province","regionCode":"BC","provinceCode":"BC","beginningYear":2020,"endingYear":2023,"boundarySet":null,"limit":4,"sortOrder":"asc"}.',
+    'Example: "Show donation trends for all parties in Ontario from 2020 to 2023" uses {"intent":"trend","metric":"totalDonations","groupBy":"year","partyCodes":["LPC","CPC","NDP","BQ","GPC","PPC"],"regionCodes":[],"regionLevel":"province","regionCode":"ON","provinceCode":"ON","beginningYear":2020,"endingYear":2023,"boundarySet":null,"limit":4,"sortOrder":"asc"}.',
     'Example: "Which party increased donations the most from 2019 to 2023" uses {"intent":"change","metric":"totalDonations","groupBy":"party","partyCodes":[],"regionCodes":[],"regionLevel":"national","regionCode":null,"provinceCode":null,"beginningYear":2019,"endingYear":2023,"boundarySet":null,"limit":1,"sortOrder":"desc"}.',
     'Example: "Which three provinces increased donations the most from 2019 to 2023" uses {"intent":"change","metric":"totalDonations","groupBy":"province","partyCodes":[],"regionCodes":[],"regionLevel":"province","regionCode":null,"provinceCode":null,"beginningYear":2019,"endingYear":2023,"boundarySet":null,"limit":3,"sortOrder":"desc"}.',
     "The limit is an integer from 1 through 10.",
@@ -202,10 +226,17 @@ function buildSystemPrompt() {
 
 function buildUserPrompt(question, currentFilters, previousQuery) {
   const context = {
-    question,
+    question: normalizeQuestionForModel(question),
     currentMapFilters: sanitizeMapFilters(currentFilters),
     previousQuery: previousQuery || null,
   };
+
+  if (requestsAllPartyCollection(question)) {
+    context.partyCollection = {
+      codes: [...SUPPORTED_PARTY_CODES],
+      instruction: "Use all six codes for a party comparison or separate party trend.",
+    };
+  }
 
   return JSON.stringify(context);
 }
@@ -231,18 +262,37 @@ function parseModelOutput(rawOutput) {
   }
 }
 
-function canonicalizeModelQuerySpec(querySpec) {
+function canonicalizeModelQuerySpec(querySpec, question = "") {
   if (!querySpec || typeof querySpec !== "object" || Array.isArray(querySpec)) {
     return querySpec;
   }
 
   const canonical = { ...querySpec };
-  const partyCodes = Array.isArray(canonical.partyCodes)
-    ? canonical.partyCodes
+  let partyCodes = Array.isArray(canonical.partyCodes)
+    ? [...new Set(canonical.partyCodes)]
     : [];
   const regionCodes = Array.isArray(canonical.regionCodes)
     ? canonical.regionCodes
     : [];
+
+  if (
+    requestsAllPartyCollection(question)
+    && canonical.groupBy === "party"
+    && canonical.intent === "comparison"
+  ) {
+    partyCodes = [...SUPPORTED_PARTY_CODES];
+    canonical.limit = SUPPORTED_PARTY_CODES.length;
+  }
+
+  if (
+    requestsAllPartyCollection(question)
+    && canonical.groupBy === "year"
+    && canonical.intent === "trend"
+  ) {
+    partyCodes = [...SUPPORTED_PARTY_CODES];
+  }
+
+  canonical.partyCodes = partyCodes;
 
   if (canonical.intent === "summary" && partyCodes.length <= 1) {
     canonical.groupBy = null;
@@ -303,13 +353,18 @@ async function interpretQuestion(
   });
   const output = parseModelOutput(rawOutput);
 
-  if (output.supported === false) {
+  const recoverableAllPartyOutput =
+    output.supported === false
+    && output.querySpec
+    && requestsAllPartyCollection(question);
+
+  if (output.supported === false && !recoverableAllPartyOutput) {
     return {
       supported: false,
       reason: "This question is outside the supported CDMP aggregate queries.",
     };
   }
-  if (output.supported !== true || !output.querySpec) {
+  if ((!recoverableAllPartyOutput && output.supported !== true) || !output.querySpec) {
     throw new AskDataInterpreterError(
       "MALFORMED_MODEL_RESPONSE",
       "The model returned an invalid response.",
@@ -320,7 +375,7 @@ async function interpretQuestion(
     return {
       supported: true,
       querySpec: validateQuerySpec(
-        canonicalizeModelQuerySpec(output.querySpec),
+        canonicalizeModelQuerySpec(output.querySpec, question),
       ),
     };
   } catch (error) {

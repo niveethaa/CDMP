@@ -61,6 +61,12 @@ function unavailableMessage(rows) {
     || "The requested data is unavailable.";
 }
 
+function suppressionNotice(rows) {
+  return rows.some((row) => row.suppressed)
+    ? " Some requested results were omitted because they are below the privacy suppression threshold."
+    : "";
+}
+
 function formatSummary(query, rows) {
   const row = rows[0];
   if (!row) return noDataMessage();
@@ -129,7 +135,7 @@ function formatComparison(query, rows) {
   const parts = values.length === 1
     ? values[0]
     : `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
-  return `Between ${period}, ${parts} in ${label}.`;
+  return `Between ${period}, ${parts} in ${label}.${suppressionNotice(rows)}`;
 }
 
 function describeChange(row, metric) {
