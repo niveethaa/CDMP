@@ -58,6 +58,20 @@ function buildPartyContext(querySpec) {
   return "all parties";
 }
 
+function buildTrendContext(querySpec) {
+  if (querySpec.partyCodes && querySpec.partyCodes.length) {
+    return `${getPartyName(querySpec.partyCodes[0])} donation`;
+  }
+  return "total donation";
+}
+
+function buildDonationContext(querySpec) {
+  if (querySpec.partyCodes && querySpec.partyCodes.length) {
+    return `${getPartyName(querySpec.partyCodes[0])} donations`;
+  }
+  return "total donations across all parties";
+}
+
 function buildPeriod(beginningYear, endingYear) {
   return beginningYear === endingYear
     ? String(beginningYear)
@@ -69,6 +83,8 @@ function generateSuggestions(querySpec) {
 
   const suggestions = [];
   const party = buildPartyContext(querySpec);
+  const trendContext = buildTrendContext(querySpec);
+  const donationContext = buildDonationContext(querySpec);
   const region = buildRegionContext(querySpec);
   const otherParty = getPartyName(getOtherParty(querySpec.partyCodes || []));
   const period = buildPeriod(querySpec.beginningYear, querySpec.endingYear);
@@ -77,14 +93,16 @@ function generateSuggestions(querySpec) {
   if (querySpec.intent !== "trend") {
     suggestions.push(
       querySpec.beginningYear === querySpec.endingYear
-        ? `Show the ${party} donation trend ${region} for ${querySpec.beginningYear}`
-        : `Show the ${party} donation trend ${region} from ${querySpec.beginningYear} to ${querySpec.endingYear}`
+        ? `Show the ${trendContext} trend ${region} from ${Math.min(alternateYear, querySpec.beginningYear)} to ${Math.max(alternateYear, querySpec.beginningYear)}`
+        : `Show the ${trendContext} trend ${region} from ${querySpec.beginningYear} to ${querySpec.endingYear}`
     );
   }
 
   if (querySpec.intent !== "comparison" && querySpec.partyCodes?.length < 2) {
     suggestions.push(
-      `Compare ${party} and ${otherParty} donations ${region} in ${period}`
+      querySpec.partyCodes?.length
+        ? `Compare ${party} and ${otherParty} donations ${region} in ${period}`
+        : `Compare donations across all six parties ${region} in ${period}`
     );
   }
 
@@ -97,9 +115,12 @@ function generateSuggestions(querySpec) {
     );
   }
 
-  if (querySpec.intent !== "ranking") {
+  if (
+    querySpec.intent !== "ranking"
+    && querySpec.beginningYear !== querySpec.endingYear
+  ) {
     suggestions.push(
-      `Which year had the most ${party} donations ${region} from ${querySpec.beginningYear} to ${querySpec.endingYear}?`
+      `Which year had the most ${donationContext} ${region} from ${querySpec.beginningYear} to ${querySpec.endingYear}?`
     );
   }
 
@@ -117,7 +138,7 @@ function generateSuggestions(querySpec) {
 
   if (querySpec.regionLevel === "province" && querySpec.regionCode && querySpec.intent !== "ranking") {
     suggestions.push(
-      `Which ridings in ${PROVINCE_NAMES[querySpec.regionCode] || querySpec.regionCode} had the most ${party} donations?`
+      `Which ridings in ${PROVINCE_NAMES[querySpec.regionCode] || querySpec.regionCode} had the most ${party} donations in ${period}?`
     );
   }
 
