@@ -4,6 +4,8 @@ import DonationMap from "../components/Map/DonationMap";
 import RegionSummaryPanel from "../components/Summary/RegionSummaryPanel";
 import DonationFilters from "../components/Filters/DonationFilters";
 import ErrorBoundary from "../components/ErrorBoundaryComponent";
+import AskDataPanel from "../components/AskData/AskDataPanel";
+
 import {
   fetchNationalStats,
   fetchAllProvinceStats,
@@ -683,6 +685,26 @@ export default function HomePage() {
               loading={panelLoading}
             />
           </ErrorBoundary>
+          <AskDataPanel
+            currentFilters={overviewQuery}
+            onApplyFilters={(mapFilters, provinceCode, ridingCode) => {
+              handleApplyFilters(mapFilters);
+              if (provinceCode) {
+                setTimeout(() => {
+                  handleSelectProvince(provinceCode);
+                }, 100);
+              }
+              if (ridingCode){
+                setTimeout(() => {
+                  handleSelectRiding({ code: ridingCode, provinceCode });
+                }, 500);
+              }
+             }}
+             onClearFilters={() => {
+              handleBackToNational();
+              handleApplyFilters(getDefaultFilters());
+            }}
+           />
         </aside>
       </div>
     </div>
