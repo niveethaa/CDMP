@@ -690,14 +690,10 @@ export default function HomePage() {
             onApplyFilters={(mapFilters, provinceCode, ridingCode) => {
               handleApplyFilters(mapFilters);
               if (provinceCode) {
-                setTimeout(() => {
                   handleSelectProvince(provinceCode);
-                }, 100);
               }
               if (ridingCode){
-                setTimeout(() => {
                   handleSelectRiding({ code: ridingCode, provinceCode });
-                }, 500);
               }
              }}
              onClearFilters={() => {

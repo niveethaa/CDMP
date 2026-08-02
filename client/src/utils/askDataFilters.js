@@ -10,7 +10,7 @@ function getMetricMode(metric) {
 
 function getPartyCode(partyCodes) {
   if (!partyCodes || partyCodes.length === 0) return "ALL";
-  return partyCodes[0];
+  return partyCodes.join(",");
 }
 
 function getRidingCode(interpretedFilters) {
@@ -30,7 +30,7 @@ function convertToMapFilters(interpretedFilters) {
   if (!interpretedFilters) return null;
   const isRiding = interpretedFilters.regionLevel === "riding";
   return {
-    partyCode: interpretedFilters.intent === "comparison" ? "ALL" : getPartyCode(interpretedFilters.partyCodes),
+    partyCode: getPartyCode(interpretedFilters.partyCodes),
     beginningYear: interpretedFilters.beginningYear,
     endingYear: interpretedFilters.endingYear,
     metricMode: getMetricMode(interpretedFilters.metric),

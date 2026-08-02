@@ -149,6 +149,7 @@ function buildSystemPrompt() {
     "A province ranking uses groupBy province and regionLevel province.",
     "A riding query includes provinceCode and a compatible boundarySet.",
     "The limit is an integer from 1 through 5.",
+    "previousQuery is prior context only, not a default to repeat. Always derive intent, partyCodes, metric, groupBy, and region fields fully from the current question; only fall back to previousQuery for fields the current question leaves genuinely ambiguous.",
   ].join("\n");
 }
 
