@@ -11,7 +11,7 @@ course-project-nacss-drive-upload-2026-07-10.zip
 
 Download the data package from Google Drive:
 
-[Download `course-project-nacss-drive-upload-2026-07-10.zip`](https://drive.google.com/file/d/1xQCDA2nmejBIbpYF7N54gwZZ8EDKnb5G/view?usp=drive_link)
+[Download `course-project-nacss-data-drive-upload.zip`](https://drive.google.com/file/d/1xQCDA2nmejBIbpYF7N54gwZZ8EDKnb5G/view?usp=sharing)
 
 Unzip it from the project root so the paths below land in the expected places:
 
