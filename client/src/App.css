@@ -2188,52 +2188,169 @@ body {
 .ask-answer-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  background: #131625;
-  border: 1px solid #1e2235;
-  border-radius: 8px;
+  gap: 11px;
+  padding: 14px;
+  background: linear-gradient(155deg, #151927, #11141f);
+  border: 1px solid #252c45;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+.ask-answer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ask-answer-label {
+  color: #818cf8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ask-answer-intent {
+  padding: 3px 7px;
+  background: rgba(67, 97, 238, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 999px;
+  color: #a5b4fc;
+  font-size: 9px;
+  font-weight: 700;
 }
 
 .ask-answer-text {
-  color: #f1f5f9;
-  font-size: 13px;
+  color: #e8edf7;
+  font-size: 14px;
   margin: 0;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 .ask-filter-summary {
-  color: #64748b;
-  font-size: 11px;
-  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
-.ask-coverage {
-  color: #475569;
-  font-size: 11px;
+.ask-filter-summary span {
+  padding: 4px 7px;
+  background: #191e2f;
+  border: 1px solid #28304a;
+  border-radius: 5px;
+  color: #8290aa;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.ask-coverage,
+.ask-coverage-complete {
   margin: 0;
+  background: rgba(30, 41, 59, 0.38);
+  border: 1px solid #273047;
+  border-radius: 7px;
+  color: #71809a;
+  font-size: 10px;
+}
+
+.ask-coverage summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 9px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.ask-coverage summary::-webkit-details-marker {
+  display: none;
+}
+
+.ask-coverage summary::before {
+  content: "+";
+  color: #818cf8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ask-coverage[open] summary::before {
+  content: "−";
+}
+
+.ask-coverage summary span:first-child {
+  flex: 1;
+  color: #95a2b9;
+  font-weight: 600;
+}
+
+.ask-coverage summary span:last-child {
+  color: #65738d;
+}
+
+.ask-coverage-notes {
+  padding: 0 9px 8px 26px;
+  border-top: 1px solid #252c41;
+}
+
+.ask-coverage-notes p {
+  margin: 7px 0 0;
+  line-height: 1.4;
+}
+
+.ask-coverage-complete {
+  padding: 8px 9px;
 }
 
 .ask-data-table {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 4px;
+  overflow: hidden;
+  background: #0f121d;
+  border: 1px solid #222940;
+  border-radius: 8px;
+}
+
+.ask-results-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 9px;
+  background: #171b2a;
+  border-bottom: 1px solid #222940;
+  color: #65738d;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 .ask-data-row {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  gap: 12px;
+  padding: 6px 9px;
+  border-bottom: 1px solid rgba(34, 41, 64, 0.65);
+  font-size: 11px;
+}
+
+.ask-data-row:last-child {
+  border-bottom: none;
 }
 
 .ask-data-label {
-  color: #94a3b8;
+  color: #9eabc1;
 }
 
 .ask-data-value {
   color: #f1f5f9;
-  font-weight: 500;
+  font-weight: 700;
+}
+
+.ask-data-value--muted {
+  color: #67758e;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .ask-clear-btn {
@@ -2266,9 +2383,14 @@ body {
 }
 
 .ask-incompatible {
-  color: #64748b;
-  font-size: 11px;
-  margin: 4px 0 0;
+  margin: 0;
+  padding: 7px 9px;
+  background: rgba(71, 85, 105, 0.09);
+  border-left: 2px solid #475569;
+  border-radius: 0 5px 5px 0;
+  color: #71809a;
+  font-size: 10px;
+  line-height: 1.4;
 }
 
 .ask-start-over-btn {
@@ -2290,9 +2412,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 8px;
-  border-top: 1px solid #1e2235;
-  padding-top: 8px;
+  margin-top: 1px;
+  border-top: 1px solid #252c41;
+  padding-top: 11px;
 }
 
 .ask-suggestions-label {
@@ -2301,4 +2423,32 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin: 0;
+}
+
+.ask-followup-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 9px;
+  background: #111520;
+  border: 1px solid #242b40;
+  border-radius: 7px;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.ask-followup-btn > span:first-child {
+  flex-shrink: 0;
+  color: #6677c8;
+}
+
+.ask-followup-btn:hover {
+  background: #191e2f;
+  border-color: #35405f;
+  color: #dbe3f2;
 }

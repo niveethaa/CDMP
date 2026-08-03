@@ -50,7 +50,7 @@ function formatMetricLabel(metric) {
 }
 
 function buildFilterSummary(interpretedFilters) {
-  if (!interpretedFilters) return null;
+  if (!interpretedFilters) return [];
   const parts = [];
   if (interpretedFilters.partyCodes && interpretedFilters.partyCodes.length) {
     parts.push(interpretedFilters.partyCodes.join(", "));
@@ -63,13 +63,24 @@ function buildFilterSummary(interpretedFilters) {
     parts.push(`${interpretedFilters.beginningYear}–${interpretedFilters.endingYear}`);
   }
   if (interpretedFilters.metric) parts.push(formatMetricLabel(interpretedFilters.metric));
-  return parts.length ? parts.join(" · ") : null;
+  return parts;
+}
+
+function formatResultValue(row, metric) {
+  if (row.suppressed) return "Suppressed";
+  if (row.unavailable) return "Unavailable";
+  return formatRowValue(row.value, metric);
 }
 
 function AnswerCard({ result, onApplyFilters, onSuggestionClick }) {
   const filterSummary = buildFilterSummary(result.interpretedFilters);
   const compatible = isMapCompatible(result.interpretedFilters);
   const suggestions = generateSuggestions(result.interpretedFilters);
+  const coverageNotes = result.coverage?.notes || [];
+  const intentLabel = result.interpretedFilters?.intent
+    ? result.interpretedFilters.intent.charAt(0).toUpperCase()
+      + result.interpretedFilters.intent.slice(1)
+    : "Answer";
 
   function handleApplyToMap() {
     if (!onApplyFilters || !result.interpretedFilters) return;
@@ -88,28 +99,52 @@ function AnswerCard({ result, onApplyFilters, onSuggestionClick }) {
 
   return (
     <div className="ask-answer-card">
+      <div className="ask-answer-header">
+        <span className="ask-answer-label">CDMP answer</span>
+        <span className="ask-answer-intent">{intentLabel}</span>
+      </div>
+
       <p className="ask-answer-text">{result.answer}</p>
 
-      {filterSummary && (
-        <p className="ask-filter-summary">{filterSummary}</p>
-      )}
-
-      {result.coverage && (
-        <div className="ask-coverage">
-          <p>Data coverage: {result.coverage.beginningYear}–{result.coverage.endingYear}</p>
-          {result.coverage.notes?.map((note) => (
-            <p key={note}>{note}</p>
+      {filterSummary.length > 0 && (
+        <div className="ask-filter-summary" aria-label="Query filters">
+          {filterSummary.map((filter) => (
+            <span key={filter}>{filter}</span>
           ))}
         </div>
       )}
 
+      {result.coverage && (
+        coverageNotes.length > 0 ? (
+          <details className="ask-coverage">
+            <summary>
+              <span>Data coverage: {result.coverage.beginningYear}–{result.coverage.endingYear}</span>
+              <span>{coverageNotes.length} {coverageNotes.length === 1 ? "limitation" : "limitations"}</span>
+            </summary>
+            <div className="ask-coverage-notes">
+              {coverageNotes.map((note) => (
+                <p key={note}>{note}</p>
+              ))}
+            </div>
+          </details>
+        ) : (
+          <p className="ask-coverage-complete">
+            Data coverage: {result.coverage.beginningYear}–{result.coverage.endingYear}
+          </p>
+        )
+      )}
+
       {result.data && result.data.rows && result.data.rows.length > 0 && (
         <div className="ask-data-table">
+          <div className="ask-results-header">
+            <span>Results</span>
+            <span>{formatMetricLabel(result.interpretedFilters?.metric)}</span>
+          </div>
           {result.data.rows.map((row, i) => (
             <div key={i} className="ask-data-row">
               <span className="ask-data-label">{row.label}</span>
-              <span className="ask-data-value">
-                {row.suppressed || row.unavailable ? "—" : formatRowValue(row.value, result.interpretedFilters?.metric)}
+              <span className={`ask-data-value${row.suppressed || row.unavailable ? " ask-data-value--muted" : ""}`}>
+                {formatResultValue(row, result.interpretedFilters?.metric)}
               </span>
             </div>
           ))}
@@ -123,7 +158,9 @@ function AnswerCard({ result, onApplyFilters, onSuggestionClick }) {
       )}
 
       {!compatible && (
-        <p className="ask-incompatible">This query cannot be displayed on the map.</p>
+        <p className="ask-incompatible">
+          This result uses multiple values, so it stays in the answer card.
+        </p>
       )}
 
       {suggestions.length > 0 && (
@@ -132,10 +169,11 @@ function AnswerCard({ result, onApplyFilters, onSuggestionClick }) {
           {suggestions.map((suggestion) => (
             <button
               key={suggestion}
-              className="ask-example-btn"
+              className="ask-followup-btn"
               onClick={() => onSuggestionClick(suggestion)}
             >
-              {suggestion}
+              <span aria-hidden="true">↳</span>
+              <span>{suggestion}</span>
             </button>
           ))}
         </div>
