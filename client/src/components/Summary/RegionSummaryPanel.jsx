@@ -36,10 +36,11 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
   }
 
   const { region, totals = {}, partyStats = [], donationsTrend, privacy, filters } = stats;
+  const visiblePartyStats = partyStats.filter((party) => party.partyCode?.toUpperCase() !== "UNKNOWN");
   const isNational = region?.level === "national";
   const isPerCapita = filters?.metricMode === "per_capita";
   const isRiding = region?.level === "riding";
-  const maxParty = partyStats.reduce((m, p) => Math.max(m, p.totalDonations || 0), 1);
+  const maxParty = visiblePartyStats.reduce((m, p) => Math.max(m, p.totalDonations || 0), 1);
   const trendMetricKey = isPerCapita ? "perCapitaAmount" : "totalDonations";
   const maxTrend = (donationsTrend || []).reduce(
     (m, t) => Math.max(m, t[trendMetricKey] || 0),
@@ -118,10 +119,10 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
       <section className="panel-section">
         <div className="section-header-row">
           <h3 className="section-title">Party Breakdown</h3>
-          {partyStats.length > 0 && <span className="section-count">{partyStats.length} parties</span>}
+          {visiblePartyStats.length > 0 && <span className="section-count">{visiblePartyStats.length} parties</span>}
         </div>
-        {partyStats.length > 0 ? (
-          partyStats.map((p) => (
+        {visiblePartyStats.length > 0 ? (
+          visiblePartyStats.map((p) => (
             <PartyBar key={p.partyCode} party={p} maxTotal={maxParty} />
           ))
         ) : (
