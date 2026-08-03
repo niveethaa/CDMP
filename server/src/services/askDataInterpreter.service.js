@@ -200,6 +200,25 @@ function requestsGeographicOverride(question) {
     .test(String(question || ""));
 }
 
+function requestsGeographicCollection(question) {
+  return /\b(?:province|provinces|territory|territories|riding|ridings)\b/i
+    .test(String(question || ""));
+}
+
+function requestsMetricOverride(question) {
+  return /\b(?:how much|amount|money|funding|fundraising|dollars?|how many|number of|count of|donation count|contribution count|donor count|number of donors|supporters|contributors|average donation|average gift)\b/i
+    .test(String(question || ""));
+}
+
+function requestsPartyOverride(question) {
+  return /\b(?:lpc|cpc|ndp|bq|gpc|ppc|liberal|liberals|conservative|conservatives|bloc|green|greens|people(?:'s)? party|all parties|every party|each party|which party|by party)\b/i
+    .test(String(question || ""));
+}
+
+function metricForMapMode(metricMode) {
+  return metricMode === "donation_count" ? "donationCount" : "totalDonations";
+}
+
 function looksLikeAggregateQuestion(question) {
   return /\b(?:donat|donor|contribut|fundrais|party|parties|province|provinces|riding|ridings|average gift|per capita)\w*/i
     .test(String(question || ""));
@@ -271,6 +290,7 @@ function buildSystemPrompt() {
     "A question about one named riding always remains at regionLevel riding for summaries, party rankings, trends, party comparisons, year comparisons, and party changes. Use its riding name or code as regionCode, its provinceCode, and a year-compatible boundarySet. Never replace a named riding with its province.",
     "Use federal_ridings_1996 for riding years 1997-2003, federal_ridings_2003 for 2004-2014, and federal_ridings_2013 for 2015-2024.",
     "If resolvedRiding is present in the user context and is not ambiguous, treat its name, provinceCode, and boundarySet as authoritative. If it lists multiple matches, do not guess which riding the user intended.",
+    "currentMapFilters describes the map the user is viewing. For a new question, use its metric, party, period, and geographic scope whenever the question omits that field. Explicit wording in the question takes priority, and previousQuery takes priority for follow-up questions.",
     'Example: "Which party received the most donations nationally in 2024?" uses {"intent":"ranking","metric":"totalDonations","groupBy":"party","partyCodes":[],"regionCodes":[],"regionLevel":"national","regionCode":null,"provinceCode":null,"beginningYear":2024,"endingYear":2024,"boundarySet":null,"limit":1,"sortOrder":"desc"}.',
     'Example: "Which ridings in Ontario had the most NDP donations in 2024?" uses {"intent":"ranking","metric":"totalDonations","groupBy":"riding","partyCodes":["NDP"],"regionCodes":[],"regionLevel":"riding","regionCode":null,"provinceCode":"ON","beginningYear":2024,"endingYear":2024,"boundarySet":"federal_ridings_2013","limit":5,"sortOrder":"desc"}.',
     'Example: "Which Quebec ridings had the most Bloc donations in 2010?" uses {"intent":"ranking","metric":"totalDonations","groupBy":"riding","partyCodes":["BQ"],"regionCodes":[],"regionLevel":"riding","regionCode":null,"provinceCode":"QC","beginningYear":2010,"endingYear":2010,"boundarySet":"federal_ridings_2003","limit":5,"sortOrder":"desc"}.',
@@ -382,16 +402,48 @@ function canonicalizeModelQuerySpec(querySpec, question = "", context = {}) {
 
   canonical.partyCodes = partyCodes;
 
+  const currentMapFilters = sanitizeMapFilters(context.currentFilters);
+
+  if (
+    !context.previousQuery
+    && currentMapFilters
+    && !requestsMetricOverride(question)
+  ) {
+    canonical.metric = metricForMapMode(currentMapFilters.metricMode);
+  }
+
+  if (
+    !context.previousQuery
+    && currentMapFilters?.partyCode
+    && currentMapFilters.partyCode !== "ALL"
+    && SUPPORTED_PARTY_CODES.includes(String(currentMapFilters.partyCode).toUpperCase())
+    && !requestsPartyOverride(question)
+    && canonical.groupBy !== "party"
+  ) {
+    canonical.partyCodes = [String(currentMapFilters.partyCode).toUpperCase()];
+    partyCodes = canonical.partyCodes;
+  }
+
   const requestedLimit = requestedResultLimit(question);
   if (canonical.intent === "ranking" && requestedLimit) {
     canonical.limit = requestedLimit;
   }
 
   if (!explicitYears(question).length && !context.previousQuery) {
-    canonical.endingYear = DEFAULT_QUERY_YEAR;
-    canonical.beginningYear = ["trend", "change"].includes(canonical.intent)
-      ? DEFAULT_TREND_BEGINNING_YEAR
-      : DEFAULT_QUERY_YEAR;
+    const mapBeginningYear = Number(currentMapFilters?.beginningYear);
+    const mapEndingYear = Number(currentMapFilters?.endingYear);
+    const hasMapPeriod = Number.isInteger(mapBeginningYear)
+      && Number.isInteger(mapEndingYear)
+      && mapBeginningYear >= DATA_BEGINNING_YEAR
+      && mapEndingYear <= DATA_ENDING_YEAR
+      && mapBeginningYear <= mapEndingYear;
+
+    canonical.endingYear = hasMapPeriod ? mapEndingYear : DEFAULT_QUERY_YEAR;
+    canonical.beginningYear = hasMapPeriod
+      ? mapBeginningYear
+      : ["trend", "change"].includes(canonical.intent)
+        ? DEFAULT_TREND_BEGINNING_YEAR
+        : DEFAULT_QUERY_YEAR;
   }
 
   if (
@@ -427,6 +479,48 @@ function canonicalizeModelQuerySpec(querySpec, question = "", context = {}) {
       canonical.beginningYear,
       canonical.endingYear,
     ) || context.previousQuery.boundarySet;
+  } else if (
+    !context.previousQuery
+    && currentMapFilters?.provinceCode
+    && !requestsGeographicOverride(question)
+    && /\bridings?\b/i.test(String(question || ""))
+  ) {
+    canonical.regionLevel = "riding";
+    canonical.regionCode = null;
+    canonical.provinceCode = String(currentMapFilters.provinceCode).toUpperCase();
+    canonical.regionCodes = [];
+    canonical.boundarySet = boundarySetForPeriod(
+      canonical.beginningYear,
+      canonical.endingYear,
+    ) || currentMapFilters.boundarySet || canonical.boundarySet;
+  } else if (
+    !context.previousQuery
+    && currentMapFilters?.regionLevel
+    && !requestsGeographicOverride(question)
+    && !requestsGeographicCollection(question)
+  ) {
+    canonical.regionLevel = currentMapFilters.regionLevel;
+    canonical.regionCodes = [];
+
+    if (currentMapFilters.regionLevel === "national") {
+      canonical.regionCode = null;
+      canonical.provinceCode = null;
+      canonical.boundarySet = null;
+    } else if (currentMapFilters.regionLevel === "province") {
+      const provinceCode = String(
+        currentMapFilters.provinceCode || currentMapFilters.regionCode || "",
+      ).toUpperCase();
+      canonical.regionCode = provinceCode;
+      canonical.provinceCode = provinceCode;
+      canonical.boundarySet = null;
+    } else if (currentMapFilters.regionLevel === "riding") {
+      canonical.regionCode = currentMapFilters.regionCode || canonical.regionCode;
+      canonical.provinceCode = currentMapFilters.provinceCode || canonical.provinceCode;
+      canonical.boundarySet = boundarySetForPeriod(
+        canonical.beginningYear,
+        canonical.endingYear,
+      ) || currentMapFilters.boundarySet || canonical.boundarySet;
+    }
   } else if (canonical.regionLevel === "riding") {
     canonical.boundarySet = boundarySetForPeriod(
       canonical.beginningYear,
@@ -512,7 +606,10 @@ async function interpretQuestion(
       questionPeriod.endingYear,
     );
   }
-  const defaultPeriod = questionPeriod.isDefault
+  const safeCurrentFilters = sanitizeMapFilters(currentFilters);
+  const hasCurrentMapPeriod = Number.isInteger(Number(safeCurrentFilters?.beginningYear))
+    && Number.isInteger(Number(safeCurrentFilters?.endingYear));
+  const defaultPeriod = questionPeriod.isDefault && !hasCurrentMapPeriod
     ? {
       beginningYear: DEFAULT_QUERY_YEAR,
       endingYear: DEFAULT_QUERY_YEAR,
@@ -543,7 +640,13 @@ async function interpretQuestion(
     try {
       return {
         supported: true,
-        querySpec: validateQuerySpec(fallback),
+        querySpec: validateQuerySpec(
+          canonicalizeModelQuerySpec(fallback, question, {
+            currentFilters,
+            previousQuery: normalizedPreviousQuery,
+            ridingContext,
+          }),
+        ),
       };
     } catch (_error) {
       return null;
@@ -597,6 +700,7 @@ async function interpretQuestion(
         supported: true,
         querySpec: validateQuerySpec(
           canonicalizeModelQuerySpec(output.querySpec, question, {
+            currentFilters,
             previousQuery: normalizedPreviousQuery,
             ridingContext,
           }),

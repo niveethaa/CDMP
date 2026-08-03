@@ -108,6 +108,130 @@ describe("Ask Data natural-language interpreter", () => {
     });
   });
 
+  it("inherits omitted fields from the current map view", async () => {
+    const provider = {
+      generateJson: jest.fn().mockResolvedValue(validModelOutput({
+        partyCodes: [],
+        regionLevel: "national",
+        regionCode: null,
+        provinceCode: null,
+        beginningYear: 1993,
+        endingYear: 2024,
+      })),
+    };
+
+    const result = await interpretQuestion(
+      {
+        question: "Show the donation total for this view.",
+        currentFilters: {
+          partyCode: "LPC",
+          metricMode: "donation_count",
+          regionLevel: "province",
+          regionCode: "ON",
+          provinceCode: "ON",
+          beginningYear: 2020,
+          endingYear: 2022,
+        },
+      },
+      { provider },
+    );
+
+    expect(result.querySpec).toMatchObject({
+      metric: "donationCount",
+      partyCodes: ["LPC"],
+      regionLevel: "province",
+      regionCode: "ON",
+      provinceCode: "ON",
+      beginningYear: 2020,
+      endingYear: 2022,
+    });
+  });
+
+  it("keeps explicit question fields ahead of the current map view", async () => {
+    const provider = {
+      generateJson: jest.fn().mockResolvedValue(validModelOutput({
+        metric: "totalDonations",
+        partyCodes: ["CPC"],
+        regionLevel: "province",
+        regionCode: "BC",
+        provinceCode: "BC",
+        beginningYear: 2021,
+        endingYear: 2021,
+      })),
+    };
+
+    const result = await interpretQuestion(
+      {
+        question: "How much did Conservatives receive in British Columbia in 2021?",
+        currentFilters: {
+          partyCode: "LPC",
+          metricMode: "donation_count",
+          regionLevel: "province",
+          regionCode: "ON",
+          provinceCode: "ON",
+          beginningYear: 2023,
+          endingYear: 2023,
+        },
+      },
+      { provider },
+    );
+
+    expect(result.querySpec).toMatchObject({
+      metric: "totalDonations",
+      partyCodes: ["CPC"],
+      regionCode: "BC",
+      provinceCode: "BC",
+      beginningYear: 2021,
+      endingYear: 2021,
+    });
+  });
+
+  it("uses the visible province for an otherwise unscoped riding question", async () => {
+    const provider = {
+      generateJson: jest.fn().mockResolvedValue(validModelOutput({
+        intent: "ranking",
+        metric: "donationCount",
+        groupBy: "riding",
+        partyCodes: [],
+        regionCodes: [],
+        regionLevel: "riding",
+        regionCode: null,
+        provinceCode: null,
+        beginningYear: 2023,
+        endingYear: 2023,
+        boundarySet: "federal_ridings_2013",
+        limit: 5,
+      })),
+    };
+
+    const result = await interpretQuestion(
+      {
+        question: "Which ridings had the most donation counts?",
+        currentFilters: {
+          partyCode: "ALL",
+          metricMode: "donation_count",
+          regionLevel: "province",
+          regionCode: "ON",
+          provinceCode: "ON",
+          beginningYear: 2015,
+          endingYear: 2023,
+          boundarySet: "federal_ridings_2013",
+        },
+      },
+      { provider },
+    );
+
+    expect(result.querySpec).toMatchObject({
+      metric: "donationCount",
+      regionLevel: "riding",
+      regionCode: null,
+      provinceCode: "ON",
+      beginningYear: 2015,
+      endingYear: 2023,
+      boundarySet: "federal_ridings_2013",
+    });
+  });
+
   it("applies the five-year default period to a trend", async () => {
     const provider = {
       generateJson: jest.fn().mockResolvedValue(validModelOutput({

@@ -1,4 +1,8 @@
-import { generateSuggestions } from "./askDataSuggestions";
+import {
+  buildMapContextLabel,
+  generateMapPrompts,
+  generateSuggestions,
+} from "./askDataSuggestions";
 
 function query(overrides = {}) {
   return {
@@ -16,6 +20,58 @@ function query(overrides = {}) {
 }
 
 describe("Ask Data suggestions", () => {
+  it("generates national donation amount prompts from the current map", () => {
+    expect(generateMapPrompts({
+      partyCode: "ALL",
+      metricMode: "total",
+      regionLevel: "national",
+      regionCode: "CA",
+      beginningYear: 2021,
+      endingYear: 2023,
+    })).toEqual([
+      "How much was donated nationally from 2021 to 2023?",
+      "Compare donations across all six parties nationally from 2021 to 2023.",
+      "Which province had the most donations from 2021 to 2023?",
+      "Show the donation trend nationally from 2021 to 2023.",
+    ]);
+  });
+
+  it("generates province donation count prompts for a selected party", () => {
+    expect(generateMapPrompts({
+      partyCode: "LPC",
+      metricMode: "donation_count",
+      regionLevel: "province",
+      regionCode: "ON",
+      provinceCode: "ON",
+      beginningYear: 2023,
+      endingYear: 2023,
+    })).toEqual([
+      "How many Liberal donations were made in Ontario in 2023?",
+      "Compare Liberal and Conservative donation counts in Ontario in 2023.",
+      "Which ridings in Ontario had the highest Liberal donation counts in 2023?",
+      "Show the Liberal donation count trend in Ontario from 2019 to 2023.",
+    ]);
+  });
+
+  it("generates named riding prompts and a readable current-view label", () => {
+    const filters = {
+      partyCode: "ALL",
+      metricMode: "donation_count",
+      regionLevel: "riding",
+      regionCode: "Ajax",
+      provinceCode: "ON",
+      beginningYear: 2015,
+      endingYear: 2023,
+    };
+
+    expect(generateMapPrompts(filters)).toContain(
+      "Rank all parties by donation counts in Ajax, Ontario from 2015 to 2023.",
+    );
+    expect(buildMapContextLabel(filters)).toBe(
+      "Ajax, Ontario · all parties · 2015–2023 · Donation count",
+    );
+  });
+
   it("generates valid aggregate and all-party questions", () => {
     expect(generateSuggestions(query())).toEqual([
       "Show the total donation trend in Ontario from 2019 to 2023",

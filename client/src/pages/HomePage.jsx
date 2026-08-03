@@ -538,6 +538,34 @@ export default function HomePage() {
     [activeBoundarySet, filters, selectedProvinceCode, viewLevel],
   );
 
+  const askCurrentFilters = useMemo(() => {
+    const visiblePeriod = viewLevel === "national" ? overviewQuery : ridingQuery;
+    const ridingName = selectedStats?.region?.name
+      || selectedRidingInfo?.name
+      || selectedRidingCode;
+
+    return {
+      ...visiblePeriod,
+      regionLevel: viewLevel,
+      regionCode: viewLevel === "national"
+        ? "CA"
+        : viewLevel === "province"
+          ? selectedProvinceCode
+          : ridingName,
+      provinceCode: selectedProvinceCode || undefined,
+      boundarySet: viewLevel === "national" ? undefined : activeBoundarySet?.code,
+    };
+  }, [
+    activeBoundarySet?.code,
+    overviewQuery,
+    ridingQuery,
+    selectedProvinceCode,
+    selectedRidingCode,
+    selectedRidingInfo?.name,
+    selectedStats?.region?.name,
+    viewLevel,
+  ]);
+
   if (initialLoading) {
     return (
       <div className="cdmp-fullscreen">
@@ -686,7 +714,7 @@ export default function HomePage() {
             />
           </ErrorBoundary>
           <AskDataPanel
-            currentFilters={overviewQuery}
+            currentFilters={askCurrentFilters}
             onApplyFilters={(mapFilters, provinceCode, ridingCode) => {
               handleApplyFilters(mapFilters);
               if (provinceCode) {

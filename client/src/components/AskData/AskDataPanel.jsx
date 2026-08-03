@@ -1,14 +1,11 @@
-import { useState, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import { askQuestion } from "../../api/askData";
 import { isMapCompatible, convertToMapFilters, getProvinceCode, getRidingCode } from "../../utils/askDataFilters";
-import { generateSuggestions } from "../../utils/askDataSuggestions";
-
-const EXAMPLE_PROMPTS = [
-  "Compare Liberal, Conservative, and NDP donations in Ontario in 2023.",
-  "Which ten Ontario ridings raised the most in 2023?",
-  "Which year had the most Green Party donations from 2015 to 2023?",
-  "Which party increased donations the most from 2019 to 2023?",
-];
+import {
+  buildMapContextLabel,
+  generateMapPrompts,
+  generateSuggestions,
+} from "../../utils/askDataSuggestions";
 
 const PROVINCE_CODES = {
   "Alberta": "AB",
@@ -155,6 +152,14 @@ export default function AskDataPanel({ currentFilters, onApplyFilters, onClearFi
   const [result, setResult] = useState(null);
   const [unsupported, setUnsupported] = useState(false);
   const [previousQuery, setPreviousQuery] = useState(null);
+  const examplePrompts = useMemo(
+    () => generateMapPrompts(currentFilters),
+    [currentFilters],
+  );
+  const mapContextLabel = useMemo(
+    () => buildMapContextLabel(currentFilters),
+    [currentFilters],
+  );
 
   async function handleSubmit(questionText) {
     const trimmed = (questionText || question).trim();
@@ -239,6 +244,9 @@ export default function AskDataPanel({ currentFilters, onApplyFilters, onClearFi
           )}
         </div>
         <p className="ask-panel-subtitle">Ask a question about Canadian political donations.</p>
+        {mapContextLabel && (
+          <p className="ask-map-context">Current view: {mapContextLabel}</p>
+        )}
       </div>
 
       <div className="ask-input-wrap">
@@ -274,8 +282,8 @@ export default function AskDataPanel({ currentFilters, onApplyFilters, onClearFi
 
       {!result && !error && !unsupported && !loading && (
         <div className="ask-examples">
-          <p className="ask-examples-label">Try asking:</p>
-          {EXAMPLE_PROMPTS.map((prompt) => (
+          <p className="ask-examples-label">Try asking about this view:</p>
+          {examplePrompts.map((prompt) => (
             <button
               key={prompt}
               className="ask-example-btn"

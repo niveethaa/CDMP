@@ -81,6 +81,132 @@ function buildPeriod(beginningYear, endingYear) {
     : `${beginningYear}–${endingYear}`;
 }
 
+function buildQuestionPeriod(beginningYear, endingYear) {
+  return beginningYear === endingYear
+    ? `in ${beginningYear}`
+    : `from ${beginningYear} to ${endingYear}`;
+}
+
+function getMapRegionContext(filters) {
+  if (filters.regionLevel === "riding" && filters.regionCode) {
+    const province = PROVINCE_NAMES[filters.provinceCode] || filters.provinceCode;
+    return {
+      label: province ? `${filters.regionCode}, ${province}` : filters.regionCode,
+      phrase: province
+        ? `in ${filters.regionCode}, ${province}`
+        : `in ${filters.regionCode}`,
+    };
+  }
+
+  if (filters.regionLevel === "province") {
+    const code = filters.regionCode || filters.provinceCode;
+    const province = PROVINCE_NAMES[code] || code;
+    return {
+      label: province,
+      phrase: `in ${province}`,
+    };
+  }
+
+  return {
+    label: "Canada",
+    phrase: "nationally",
+  };
+}
+
+function getMapPartyContext(filters) {
+  const code = filters.partyCode;
+  if (!code || code === "ALL") {
+    return {
+      code: null,
+      name: "all parties",
+    };
+  }
+
+  return {
+    code,
+    name: getPartyName(code),
+  };
+}
+
+function generateMapPrompts(filters) {
+  if (!filters?.beginningYear || !filters?.endingYear) return [];
+
+  const region = getMapRegionContext(filters);
+  const party = getMapPartyContext(filters);
+  const period = buildQuestionPeriod(filters.beginningYear, filters.endingYear);
+  const isCount = filters.metricMode === "donation_count";
+  const prompts = [];
+
+  if (party.code) {
+    prompts.push(
+      isCount
+        ? `How many ${party.name} donations were made ${region.phrase} ${period}?`
+        : `How much did ${party.name} receive ${region.phrase} ${period}?`,
+    );
+    const otherParty = getPartyName(getOtherParty([party.code]));
+    prompts.push(
+      isCount
+        ? `Compare ${party.name} and ${otherParty} donation counts ${region.phrase} ${period}.`
+        : `Compare ${party.name} and ${otherParty} donations ${region.phrase} ${period}.`,
+    );
+  } else {
+    prompts.push(
+      isCount
+        ? `How many donations were made ${region.phrase} ${period}?`
+        : `How much was donated ${region.phrase} ${period}?`,
+    );
+    prompts.push(
+      isCount
+        ? `Compare donation counts across all six parties ${region.phrase} ${period}.`
+        : `Compare donations across all six parties ${region.phrase} ${period}.`,
+    );
+  }
+
+  const partyPrefix = party.code ? `${party.name} ` : "";
+  const metricPhrase = isCount ? "donation counts" : "donations";
+  const rankingPhrase = isCount ? "the highest" : "the most";
+
+  if (filters.regionLevel === "national") {
+    prompts.push(
+      `Which province had ${rankingPhrase} ${partyPrefix}${metricPhrase} ${period}?`,
+    );
+  } else if (filters.regionLevel === "province") {
+    const province = PROVINCE_NAMES[filters.regionCode || filters.provinceCode]
+      || filters.regionCode
+      || filters.provinceCode;
+    prompts.push(
+      `Which ridings in ${province} had ${rankingPhrase} ${partyPrefix}${metricPhrase} ${period}?`,
+    );
+  } else {
+    prompts.push(
+      `Rank all parties by ${metricPhrase} ${region.phrase} ${period}.`,
+    );
+  }
+
+  const trendBeginningYear = filters.beginningYear === filters.endingYear
+    ? Math.max(1993, filters.endingYear - 4)
+    : filters.beginningYear;
+  const trendParty = party.code ? `${party.name} ` : "";
+  prompts.push(
+    `Show the ${trendParty}${isCount ? "donation count" : "donation"} trend ${region.phrase} from ${trendBeginningYear} to ${filters.endingYear}.`,
+  );
+
+  return prompts.slice(0, 4);
+}
+
+function buildMapContextLabel(filters) {
+  if (!filters?.beginningYear || !filters?.endingYear) return null;
+
+  const region = getMapRegionContext(filters);
+  const party = getMapPartyContext(filters);
+  const period = buildPeriod(filters.beginningYear, filters.endingYear);
+  const metric = filters.metricMode === "donation_count"
+    ? "Donation count"
+    : "Donation amount";
+
+  return `${region.label} · ${party.name} · ${period} · ${metric}`;
+}
+
 function generateSuggestions(querySpec) {
   if (!querySpec) return [];
 
@@ -148,4 +274,4 @@ function generateSuggestions(querySpec) {
   return suggestions.slice(0, 3);
 }
 
-export { generateSuggestions };
+export { buildMapContextLabel, generateMapPrompts, generateSuggestions };
