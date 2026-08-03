@@ -567,7 +567,7 @@ async function importCsvFile(filePath) {
     },
     {
       upsert: true,
-      new: true,
+      returnDocument: "after",
     },
   );
 
@@ -630,7 +630,7 @@ async function importCsvFile(filePath) {
           errorMessage: "",
         },
       },
-      { new: true },
+      { returnDocument: "after" },
     );
 
     console.log(`Completed ${fileInfo.fileName}`);

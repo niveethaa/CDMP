@@ -53,7 +53,7 @@ const boundarySets = [
 
 const upsertOptions = {
   upsert: true,
-  new: true,
+  returnDocument: "after",
   setDefaultsOnInsert: true,
 };
 

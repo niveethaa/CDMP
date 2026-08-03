@@ -266,7 +266,7 @@ async function updateReferenceBatches(batchStats) {
       },
       {
         upsert: true,
-        new: true,
+        returnDocument: "after",
       },
     );
   }

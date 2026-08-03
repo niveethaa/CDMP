@@ -63,7 +63,7 @@ async function seedPoliticalParties() {
         { $set: party },
         {
           upsert: true,
-          new: true,
+          returnDocument: "after",
         },
       );
     }
