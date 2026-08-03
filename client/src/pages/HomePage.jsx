@@ -745,6 +745,7 @@ export default function HomePage() {
             />
           </ErrorBoundary>
           <AskDataPanel
+            key={`${viewLevel}:${selectedProvinceCode || "CA"}:${selectedRidingCode || ""}`}
             currentFilters={askCurrentFilters}
             onApplyFilters={(mapFilters, provinceCode, ridingCode) => {
               handleApplyFilters(mapFilters);
