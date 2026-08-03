@@ -12,6 +12,7 @@ export default function Account() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [statusType, setStatusType] = useState("");
 
   const navigate = useNavigate();
 
@@ -21,7 +22,11 @@ export default function Account() {
         const data = await fetchMe();
         setEmail(data.email);
         setRole(data.role);
-        setCreatedAt(new Date(data.createdAt).toLocaleDateString());
+        setCreatedAt(new Date(data.createdAt).toLocaleDateString("en-CA", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }));
       } catch {
         navigate("/login");
       } finally {
@@ -34,24 +39,29 @@ export default function Account() {
   async function handleChangePassword(e) {
     e.preventDefault();
     setStatusMessage("");
+    setStatusType("");
 
     if (newPassword !== confirmPassword) {
       setStatusMessage("New passwords do not match.");
+      setStatusType("error");
       return;
     }
     if (newPassword.length < 8) {
       setStatusMessage("New password must be at least 8 characters.");
+      setStatusType("error");
       return;
     }
 
     try {
       const data = await changePassword(currentPassword, newPassword);
       setStatusMessage(data.message);
+      setStatusType("success");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
       setStatusMessage(err.message);
+      setStatusType("error");
     }
   }
 
@@ -66,56 +76,103 @@ export default function Account() {
   }
 
   return (
-    <div className="login-page">
-      <div className="login-box">
-        <h1>My Account</h1>
-        <p>Researcher account information</p>
+    <div className="login-page account-page">
+      <main className="account-card">
+        <header className="account-header">
+          <div className="account-avatar" aria-hidden="true">
+            {email.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <p className="account-eyebrow">Researcher profile</p>
+            <h1>My Account</h1>
+            <p className="account-subtitle">Manage your account details and password.</p>
+          </div>
+        </header>
 
-        <div style={{ margin: "20px 0", textAlign: "left" }}>
-          <p><strong>Email:</strong> {email}</p>
-          <p><strong>Role:</strong> {role}</p>
-          <p><strong>Member since:</strong> {createdAt}</p>
-        </div>
+        <dl className="account-details">
+          <div className="account-detail account-detail--email">
+            <dt>Email address</dt>
+            <dd>{email}</dd>
+          </div>
+          <div className="account-detail">
+            <dt>Account role</dt>
+            <dd>{role.charAt(0).toUpperCase() + role.slice(1)}</dd>
+          </div>
+          <div className="account-detail">
+            <dt>Member since</dt>
+            <dd>{createdAt}</dd>
+          </div>
+        </dl>
 
-        <h2 style={{ fontSize: "18px", marginTop: "24px" }}>Change Password</h2>
-        <form onSubmit={handleChangePassword}>
-          <input
-            type="password"
-            placeholder="Current Password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="New Password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Confirm New Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-          <button type="submit">Update Password</button>
-        </form>
+        <section className="account-password-section">
+          <div className="account-section-header">
+            <div>
+              <p className="account-eyebrow">Security</p>
+              <h2>Change Password</h2>
+            </div>
+            <span>Minimum 8 characters</span>
+          </div>
 
-        {statusMessage && (
-          <p style={{ marginTop: "12px", fontSize: "14px", textAlign: "center" }}>
-            {statusMessage}
-          </p>
-        )}
+          <form className="account-password-form" onSubmit={handleChangePassword}>
+            <div className="account-field account-field--full">
+              <label htmlFor="current-password">Current password</label>
+              <input
+                id="current-password"
+                type="password"
+                placeholder="Enter your current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            <div className="account-field">
+              <label htmlFor="new-password">New password</label>
+              <input
+                id="new-password"
+                type="password"
+                placeholder="Enter a new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+            </div>
+            <div className="account-field">
+              <label htmlFor="confirm-password">Confirm new password</label>
+              <input
+                id="confirm-password"
+                type="password"
+                placeholder="Repeat your new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+            </div>
+            <button type="submit">Update Password</button>
+          </form>
 
-        <p style={{ marginTop: "16px", fontSize: "13px", textAlign: "center" }}>
+          {statusMessage && (
+            <p className={`account-status account-status--${statusType}`} role="status">
+              {statusMessage}
+            </p>
+          )}
+        </section>
+
+        <footer className="account-footer">
           <button
             type="button"
-            className="text-link"
+            className="account-back-button"
             onClick={() => navigate("/dashboard")}
           >
+            <span aria-hidden="true">←</span>
             Back to Dashboard
           </button>
-        </p>
-      </div>
+        </footer>
+      </main>
     </div>
   );
 }
