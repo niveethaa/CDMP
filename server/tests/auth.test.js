@@ -2,6 +2,8 @@ const request = require("supertest");
 const jwt = require("jsonwebtoken");
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret";
+process.env.CLIENT_URL = "http://localhost:8080";
+process.env.PASSWORD_RESET_PREVIEW = "true";
 
 jest.mock("../src/models/User");
 jest.mock("../src/models/ActivityLog", () => ({
@@ -20,7 +22,10 @@ function token(overrides = {}) {
 }
 
 describe("Auth account routes", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.PASSWORD_RESET_PREVIEW = "true";
+  });
 
   describe("POST /api/auth/register", () => {
     it("creates an account for an allowed email domain", async () => {
@@ -86,6 +91,80 @@ describe("Auth account routes", () => {
         .send({ email: "grad@mail.utoronto.ca", password: "wrongpass" });
 
       expect(res.status).toBe(401);
+    });
+  });
+
+  describe("password reset", () => {
+    it("returns a short-lived reset link in preview mode", async () => {
+      User.findOne.mockResolvedValue({
+        _id: "u1",
+        email: "grad@mail.utoronto.ca",
+        password: "hashed-old",
+      });
+
+      const res = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: "grad@mail.utoronto.ca" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.resetUrl).toMatch(/^http:\/\/localhost:8080\/reset-password\?token=/);
+    });
+
+    it("does not reveal whether an unknown account exists", async () => {
+      User.findOne.mockResolvedValue(null);
+
+      const res = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: "unknown@mail.utoronto.ca" });
+
+      expect(res.status).toBe(200);
+      expect(res.body).not.toHaveProperty("resetUrl");
+    });
+
+    it("does not return a reset link when preview mode is disabled", async () => {
+      process.env.PASSWORD_RESET_PREVIEW = "false";
+      User.findOne.mockResolvedValue({
+        _id: "u1",
+        email: "grad@mail.utoronto.ca",
+        password: "hashed-old",
+      });
+
+      const res = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: "grad@mail.utoronto.ca" });
+
+      expect(res.status).toBe(200);
+      expect(res.body).not.toHaveProperty("resetUrl");
+    });
+
+    it("resets the password once and invalidates the used link", async () => {
+      const user = {
+        _id: "u1",
+        email: "grad@mail.utoronto.ca",
+        password: "hashed-old",
+        save: jest.fn().mockResolvedValue({}),
+      };
+      User.findOne.mockResolvedValue(user);
+
+      const forgot = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: user.email });
+      const resetToken = new URL(forgot.body.resetUrl).searchParams.get("token");
+
+      User.findById.mockResolvedValue(user);
+      jest.spyOn(bcrypt, "hash").mockResolvedValue("hashed-new");
+
+      const firstReset = await request(app)
+        .post("/api/auth/reset-password")
+        .send({ token: resetToken, newPassword: "newpass12" });
+      const reusedReset = await request(app)
+        .post("/api/auth/reset-password")
+        .send({ token: resetToken, newPassword: "another12" });
+
+      expect(firstReset.status).toBe(200);
+      expect(user.password).toBe("hashed-new");
+      expect(user.save).toHaveBeenCalledTimes(1);
+      expect(reusedReset.status).toBe(400);
     });
   });
 

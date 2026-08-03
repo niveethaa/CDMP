@@ -201,7 +201,7 @@ npm test
 Covers:
 - Region statistics endpoints (national/province/riding), query parameters, invalid region codes
 - Research access control (401/403/200), CSV export, and analytics
-- Authentication: register (allowed-domain check), login, account info, and change-password
+- Authentication: register (allowed-domain check), login, account info, change-password, and local password-reset preview
 - Ask CDMP endpoint (`/api/ask`) — validation, supported/unsupported questions, exception flows, and rate limiting
 - Aggregation and privacy helpers, data-import scripts, and the AI provider/interpreter/executor services
 
@@ -271,5 +271,10 @@ The user needs to navigate to `/login` and then `/register` where they register 
 The backend requires a private `JWT_SECRET` in `server/.env`. Create this file
 from `server/.env.example` and replace the example value before running the
 application.
+
+The forgot-password flow can be demonstrated locally without an email service
+by setting `PASSWORD_RESET_PREVIEW=true` in `server/.env`. This exposes the
+short-lived reset link in the browser and must remain disabled outside a
+controlled demonstration.
 
 The user then has access to the dashboard where they can view individual donation records and filter by donor type, province, party, year, riding, and search donor name. They can also export a CSV file of the data. As well as, all the queries and exports are logged to the activity log.

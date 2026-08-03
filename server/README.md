@@ -23,11 +23,19 @@ The remaining values, including the AI configuration, come from `server/.env`.
 | `MONGODB_URI` | MongoDB connection string |
 | `JWT_SECRET` | Secret used to sign authentication tokens |
 | `REQUIRE_MONGODB` | Exit at startup when MongoDB is unavailable |
+| `CLIENT_URL` | Frontend URL used to build local password-reset links |
+| `PASSWORD_RESET_PREVIEW` | Return a reset link without email delivery when explicitly set to `true` |
 | `AI_PROVIDER` | `openai-compatible`, `anthropic`, or `gemini` |
 | `AI_API_KEY` | Private key for the selected provider |
 | `AI_MODEL` | Provider model identifier |
 | `AI_BASE_URL` | Required for OpenAI-compatible providers; optional otherwise |
 | `AI_REQUEST_TIMEOUT_MS` | Provider request timeout in milliseconds |
+
+For a local course demonstration without an email provider, set
+`PASSWORD_RESET_PREVIEW=true`. The forgot-password screen will display a
+15-minute reset link. Keep this setting `false` outside a controlled demo
+because anyone with access to the form and a registered email address could
+obtain that account's reset link.
 
 ## Ask CDMP Provider Setup
 

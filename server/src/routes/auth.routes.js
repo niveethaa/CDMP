@@ -1,11 +1,22 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const ActivityLog = require("../models/ActivityLog");
 const { requireAuth } = require("../middleware/auth.middleware");
 
 const router = express.Router();
+
+const PASSWORD_RESET_MESSAGE = "If that account exists, password reset instructions are available.";
+
+function getPasswordMarker(password) {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
+
+function isPasswordResetPreviewEnabled() {
+  return String(process.env.PASSWORD_RESET_PREVIEW || "").toLowerCase() === "true";
+}
 
 // POST /api/auth/register
 router.post("/register", async (req, res) => {
@@ -96,6 +107,81 @@ router.post("/login", async (req, res) => {
   } catch (error) {
     console.error("POST /api/auth/login error:", error.message);
     res.status(500).json({ message: "Login failed." });
+  }
+});
+
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
+
+    const user = await User.findOne({ email });
+    const response = { message: PASSWORD_RESET_MESSAGE };
+
+    if (user && isPasswordResetPreviewEnabled()) {
+      const resetToken = jwt.sign(
+        {
+          userId: user._id,
+          purpose: "password-reset",
+          passwordMarker: getPasswordMarker(user.password),
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "15m" }
+      );
+      const clientUrl = String(process.env.CLIENT_URL || "http://localhost:8080").replace(/\/$/, "");
+      response.resetUrl = `${clientUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+    }
+
+    res.json(response);
+  } catch (error) {
+    console.error("POST /api/auth/forgot-password error:", error.message);
+    res.status(500).json({ message: "Password reset could not be started." });
+  }
+});
+
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { token, newPassword } = req.body || {};
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: "Reset token and new password are required." });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: "New password must be at least 8 characters." });
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      return res.status(400).json({ message: "The reset link is invalid or has expired." });
+    }
+
+    if (payload.purpose !== "password-reset") {
+      return res.status(400).json({ message: "The reset link is invalid or has expired." });
+    }
+
+    const user = await User.findById(payload.userId);
+    if (!user || payload.passwordMarker !== getPasswordMarker(user.password)) {
+      return res.status(400).json({ message: "The reset link is invalid or has expired." });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    await ActivityLog.create({
+      user: user._id,
+      email: user.email,
+      action: "password_reset",
+    });
+
+    res.json({ message: "Password reset successfully." });
+  } catch (error) {
+    console.error("POST /api/auth/reset-password error:", error.message);
+    res.status(500).json({ message: "Password reset failed." });
   }
 });
 
