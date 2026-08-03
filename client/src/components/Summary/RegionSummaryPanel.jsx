@@ -149,7 +149,7 @@ function TrendLineChart({ data, maxTrend, metricMode }) {
   const W = 320;
   const H = 150;
   const padTop = 10;
-  const padLeft = 42;
+  const padLeft = 58;
   const padRight = 8;
   const padBottom = 34;
 
@@ -201,7 +201,7 @@ function TrendLineChart({ data, maxTrend, metricMode }) {
         return (
           <g key={`y-${i}`}>
             <line x1={baseX} y1={ty} x2={W - padRight} y2={ty} className="trend-gridline" />
-            <text x={baseX - 6} y={ty + 3} className="trend-axis-label" textAnchor="end">
+            <text x={baseX - 8} y={ty + 3} className="trend-axis-label" textAnchor="end">
               {formatDollars(v)}
             </text>
           </g>
