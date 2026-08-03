@@ -2,6 +2,7 @@ import { describe, it, expect } from "@jest/globals";
 import {
   isMapCompatible,
   convertToMapFilters,
+  findRidingByIdentifier,
   getProvinceCode,
   getRidingCode,
 } from "./askDataFilters";
@@ -96,6 +97,25 @@ describe("askDataFilters", () => {
 
     it("returns null for non-riding levels", () => {
       expect(getRidingCode({ regionLevel: "province" })).toBe(null);
+    });
+  });
+
+  describe("findRidingByIdentifier", () => {
+    const ridingStats = [
+      { region: { code: "35001", name: "Ajax" } },
+      { region: { code: "35090", name: "Toronto—St. Paul's" } },
+    ];
+
+    it("finds a riding by numeric code", () => {
+      expect(findRidingByIdentifier(ridingStats, "35001")).toEqual(ridingStats[0]);
+    });
+
+    it("finds a riding name despite punctuation differences", () => {
+      expect(findRidingByIdentifier(ridingStats, "Toronto St Pauls")).toEqual(ridingStats[1]);
+    });
+
+    it("returns null when the riding is unavailable", () => {
+      expect(findRidingByIdentifier(ridingStats, "Missing riding")).toBeNull();
     });
   });
 });

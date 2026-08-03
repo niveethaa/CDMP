@@ -19,6 +19,7 @@ import {
   getDefaultFilters,
 } from "../utils/boundarySets";
 import { PARTY_LABELS } from "../utils/parties";
+import { findRidingByIdentifier } from "../utils/askDataFilters";
 import "../App.css";
 
 const PROVINCE_NAMES = {
@@ -245,6 +246,7 @@ export default function HomePage() {
   const [selectedProvinceCode, setSelectedProvinceCode] = useState(null);
   const [selectedRidingCode, setSelectedRidingCode] = useState(null);
   const [selectedRidingInfo, setSelectedRidingInfo] = useState(null);
+  const [pendingRidingSelection, setPendingRidingSelection] = useState(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [panelLoading, setPanelLoading] = useState(false);
   const [mapError, setMapError] = useState(false);
@@ -440,6 +442,7 @@ export default function HomePage() {
   ]);
 
   const handleSelectProvince = useCallback((code) => {
+    setPendingRidingSelection(null);
     setSelectedProvinceCode(code);
     setSelectedRidingCode(null);
     setSelectedRidingInfo(null);
@@ -462,13 +465,41 @@ export default function HomePage() {
       ...riding,
     };
 
+    setPendingRidingSelection(null);
     setSelectedRidingCode(enrichedRiding.code);
     setSelectedRidingInfo(enrichedRiding);
     setSearchQuery("");
     setSearchResults([]);
   }, [activeBoundarySet?.code, selectedProvinceCode]);
 
+  useEffect(() => {
+    if (!pendingRidingSelection || panelLoading) return;
+    if (pendingRidingSelection.provinceCode !== selectedProvinceCode) return;
+
+    const matched = findRidingByIdentifier(
+      ridingStats,
+      pendingRidingSelection.identifier,
+    );
+
+    if (matched?.region) {
+      const selectionTimer = window.setTimeout(() => {
+        handleSelectRiding(matched.region);
+      }, 0);
+
+      return () => window.clearTimeout(selectionTimer);
+    }
+
+    return undefined;
+  }, [
+    handleSelectRiding,
+    panelLoading,
+    pendingRidingSelection,
+    ridingStats,
+    selectedProvinceCode,
+  ]);
+
   function handleBackToNational() {
+    setPendingRidingSelection(null);
     setSelectedProvinceCode(null);
     setSelectedRidingCode(null);
     setSelectedRidingInfo(null);
@@ -718,17 +749,20 @@ export default function HomePage() {
             onApplyFilters={(mapFilters, provinceCode, ridingCode) => {
               handleApplyFilters(mapFilters);
               if (provinceCode) {
-                  handleSelectProvince(provinceCode);
+                handleSelectProvince(provinceCode);
               }
-              if (ridingCode){
-                  handleSelectRiding({ code: ridingCode, provinceCode });
+              if (ridingCode && provinceCode) {
+                setPendingRidingSelection({
+                  identifier: ridingCode,
+                  provinceCode,
+                });
               }
-             }}
-             onClearFilters={() => {
+            }}
+            onClearFilters={() => {
               handleBackToNational();
               handleApplyFilters(getDefaultFilters());
             }}
-           />
+          />
         </aside>
       </div>
     </div>

@@ -20,6 +20,27 @@ function getRidingCode(interpretedFilters) {
   return null;
 }
 
+function normalizeRidingIdentifier(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function findRidingByIdentifier(ridingStats, identifier) {
+  const normalizedIdentifier = normalizeRidingIdentifier(identifier);
+  if (!normalizedIdentifier) return null;
+
+  return (ridingStats || []).find((stat) => {
+    const region = stat?.region;
+    return normalizeRidingIdentifier(region?.code) === normalizedIdentifier
+      || normalizeRidingIdentifier(region?.name) === normalizedIdentifier;
+  }) || null;
+}
+
 function isMapCompatible(interpretedFilters) {
   if (!interpretedFilters) return false;
   if (interpretedFilters.intent === "change") return false;
@@ -53,4 +74,10 @@ function getProvinceCode(interpretedFilters) {
   return null;
 }
 
-export { isMapCompatible, convertToMapFilters, getProvinceCode, getRidingCode };
+export {
+  isMapCompatible,
+  convertToMapFilters,
+  findRidingByIdentifier,
+  getProvinceCode,
+  getRidingCode,
+};

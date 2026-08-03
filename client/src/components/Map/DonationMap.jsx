@@ -52,6 +52,20 @@ function getFeatureInfo(feature, viewLevel) {
   };
 }
 
+function findFeatureLayer(layerGroup, selectedCode, viewLevel) {
+  if (!layerGroup || !selectedCode) return null;
+
+  let selectedLayer = null;
+  layerGroup.eachLayer((layer) => {
+    if (selectedLayer || !layer.feature) return;
+    if (getFeatureInfo(layer.feature, viewLevel).code === selectedCode) {
+      selectedLayer = layer;
+    }
+  });
+
+  return selectedLayer;
+}
+
 function getRegionStyle({ feature, viewLevel, stats, selectedCode, metricMode }) {
   const info = getFeatureInfo(feature, viewLevel);
   const stat = stats.find((s) => s.region?.code === info.code);
@@ -190,7 +204,7 @@ export default function DonationMap({
       center: [62, -96],
       zoom: 3,
       minZoom: 3,
-      maxZoom: 9,
+      maxZoom: 11,
       zoomControl: false,
       attributionControl: false,
       scrollWheelZoom: true,
@@ -299,11 +313,30 @@ export default function DonationMap({
 
       const bounds = geoJsonLayer.current.getBounds();
       if (bounds.isValid()) {
-        leafletMap.current.fitBounds(bounds, {
-          paddingTopLeft: isRidingView ? [24, 66] : [18, 18],
-          paddingBottomRight: [28, 28],
-          maxZoom: isRidingView ? 7 : 4,
-        });
+        const selectedLayer = isRidingView
+          ? findFeatureLayer(geoJsonLayer.current, selectedRidingCode, viewLevel)
+          : null;
+        const selectedBounds = selectedLayer?.getBounds?.();
+
+        leafletMap.current.stop();
+
+        if (selectedBounds?.isValid()) {
+          leafletMap.current.flyToBounds(selectedBounds, {
+            paddingTopLeft: [42, 82],
+            paddingBottomRight: [42, 176],
+            maxZoom: 10,
+            duration: 0.7,
+            easeLinearity: 0.25,
+          });
+        } else {
+          leafletMap.current.flyToBounds(bounds, {
+            paddingTopLeft: isRidingView ? [28, 72] : [18, 18],
+            paddingBottomRight: isRidingView ? [28, 80] : [28, 28],
+            maxZoom: isRidingView ? 7 : 4,
+            duration: 0.55,
+            easeLinearity: 0.25,
+          });
+        }
       }
     } catch (err) {
       console.error("Failed to render map layer:", err);
@@ -318,6 +351,7 @@ export default function DonationMap({
     metricMode,
     onSelectProvince,
     onSelectRiding,
+    selectedRidingCode,
     statsByCode,
     viewLevel,
   ]);
