@@ -195,7 +195,14 @@ cd server
 npm test
 ```
 
-Covers the region statistics endpoints (national/province/riding), research access control, authentication (login, account info, change password), and the analytics endpoint. The database is mocked, so no MongoDB connection is required.
+Covers:
+- Region statistics endpoints (national/province/riding), query parameters, invalid region codes
+- Research access control (401/403/200), CSV export, and analytics
+- Authentication: register (allowed-domain check), login, account info, and change-password
+- Ask CDMP endpoint (`/api/ask`) — validation, supported/unsupported questions, exception flows, and rate limiting
+- Aggregation and privacy helpers, data-import scripts, and the AI provider/interpreter/executor services
+
+The database is mocked, so no MongoDB connection is required.
 
 ### Frontend unit tests (Jest)
 
@@ -204,7 +211,7 @@ cd client
 npm test
 ```
 
-Covers the client API layer (region and auth functions) — URL building, query parameters, and error handling. `fetch` is mocked, so no running server is required.
+Covers the client API layer (region, auth, and Ask CDMP fetch functions) and pure utility functions (Ask CDMP filter mapping and suggestions) — URL building, query parameters, and error handling. `fetch` is mocked, so no running server is required.
 
 ### End-to-end tests (Cypress)
 
@@ -226,11 +233,14 @@ Cypress defaults to `http://localhost:8080` (the Docker port). To run against a 
 CYPRESS_BASE_URL=http://localhost:5173 npx cypress run
 ```
 
+**Note:** the research-login E2E specs (`research-happypath`, `dashboard-warnings`) require a registered researcher account in the database to log in. On a fresh Docker setup, register a test account through the app first.
+
 ### What the tests cover
 
-- **Backend API:** region stats (national/province/riding), query parameters, invalid region codes, research access control (401/403), CSV export, auth routes, analytics
-- **Frontend unit:** region and auth API clients
-- **End-to-end:** national map load, province-to-riding drilldown, boundary-bucket switching, filters (party/year/metric/boundary), search (national and riding views), the 2025-onward no-data state, back-to-national navigation, research login, and the full researcher happy-path
+- **Public map (UC1/UC2):** national map load, province-to-riding drilldown, boundary-bucket switching (1997–2003 / 2004–2014 / 2015–2024), the 2025-onward no-data state, filters, and search (national and riding views)
+- **Research access (UC3):** login, privacy agreement, records dashboard, filtering, CSV export, and access control
+- **Ask CDMP (UC6):** the question panel, supported/unsupported questions, and error/rate-limit states
+- **Exception handling:** map-load failure, empty results, CSV export failure, analytics failure, and search-no-results — all shown as clear warnings without crashing
 
 
 ## Handled Warnings and Exception States
