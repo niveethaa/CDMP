@@ -55,7 +55,7 @@ for the expected external data package layout.
 The current handoff package is:
 
 ```text
-[course-project-nacss-data-drive-upload.zip](https://drive.google.com/file/d/1xQCDA2nmejBIbpYF7N54gwZZ8EDKnb5G/view?usp=sharing)
+course-project-nacss-data-drive-upload.zip
 ```
 
 Use the Mongo dump restore path for grading or demos. Use the full rebuild path
