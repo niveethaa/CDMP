@@ -131,7 +131,7 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
 
       <section className="panel-section">
         <div className="section-header-row">
-          <h3 className="section-title">{isPerCapita ? "Yearly Per-Capita Trend" : "Yearly Trend"}</h3>
+          <h3 className="section-title">{isPerCapita ? "Per-Capita Donations by Year" : "Donations by Year"}</h3>
         </div>
         <TrendLineChart data={donationsTrend} maxTrend={maxTrend} metricMode={filters?.metricMode} />
       </section>
@@ -158,8 +158,11 @@ function TrendLineChart({ data, maxTrend, metricMode }) {
   const baseY = padTop + plotH;
   const baseX = padLeft;
   const niceMax = niceCeil(maxTrend);
-  const metricKey = metricMode === "per_capita" ? "perCapitaAmount" : "totalDonations";
+  const isPerCapita = metricMode === "per_capita";
+  const metricKey = isPerCapita ? "perCapitaAmount" : "totalDonations";
+  const yAxisTitle = isPerCapita ? "Per Capita (CAD)" : "Amount (CAD)";
   const n = data.length;
+  const xTickStep = Math.max(1, Math.ceil((n - 1) / 4));
   const x = (i) => padLeft + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
   const y = (v) => padTop + plotH - (v / niceMax) * plotH;
   const yTickCount = 4;
@@ -184,7 +187,7 @@ function TrendLineChart({ data, maxTrend, metricMode }) {
       className="trend-line-chart"
       viewBox={`0 0 ${W} ${H}`}
       role="img"
-      aria-label="Yearly donation trend line chart"
+      aria-label={isPerCapita ? "Per-capita donations by year line chart" : "Donations by year line chart"}
     >
       <defs>
         <linearGradient id="trendAreaFill" x1="0" y1="0" x2="0" y2="1">
@@ -210,7 +213,7 @@ function TrendLineChart({ data, maxTrend, metricMode }) {
         transform={`translate(10 ${padTop + plotH / 2}) rotate(-90)`}
         textAnchor="middle"
       >
-        Donations
+        {yAxisTitle}
       </text>
 
       <line x1={baseX} y1={padTop} x2={baseX} y2={baseY} className="trend-axis" />
@@ -233,8 +236,8 @@ function TrendLineChart({ data, maxTrend, metricMode }) {
         </g>
       ))}
 
-      {points.map((p) =>
-        p.year % 4 === 0 ? (
+      {points.map((p, i) =>
+        i === 0 || i === n - 1 || i % xTickStep === 0 ? (
           <g key={`x-${p.year}`}>
             <line x1={p.cx} y1={baseY} x2={p.cx} y2={baseY + 4} className="trend-axis" />
             <text x={p.cx} y={baseY + 14} className="trend-axis-label" textAnchor="middle">
