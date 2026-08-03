@@ -21,6 +21,7 @@ const activityLogSchema = new mongoose.Schema(
         "query",
         "export",
         "password_change",
+        "password_reset",
         "privacy_agreement",
       ],
       required: true,
