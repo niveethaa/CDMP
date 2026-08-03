@@ -96,7 +96,9 @@ Authenticated Research Users Main Screen:
 - [Standup Meeting Jun 29 - Jul 5](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/f3265cb0a02591b9c361767332ff43e9daf4c661/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_Jun29-Jul5.pdf)
 - [Standup Meeting Jul 6 - Jul 11](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/22f608c36cd6fd98380bda509fc74532da04556b/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_Jul6-11.pdf)
 - [Standup Meeting Jul 12 - Jul 18](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/0b45e186a3f680c31636bb3cbc7bd2b463515787/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_Jul12-18.pdf)
-
+- [Standup Meeting Jul 19 - Jul 25](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/44ff09c5fb71e3ccd0c23a261d661ba6e4f0d246/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_Jul19-Jul25.pdf)
+- [Standup Meeting Jul 26 - Aug 3](https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss/blob/44ff09c5fb71e3ccd0c23a261d661ba6e4f0d246/meeting_minutes/stand-up_meeting_minutes/Standup_Meeting_Minutes_Jul26-Aug3.pdf)
+  
 ## Current Data Coverage and Boundary Buckets
 
 The project data coverage is 1993–2024. Riding-level map views are organized by federal representation order because riding boundaries change over time.
