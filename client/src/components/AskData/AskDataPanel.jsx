@@ -171,7 +171,7 @@ export default function AskDataPanel({ currentFilters, onApplyFilters, onClearFi
       const data = await askQuestion({
         question: trimmed,
         currentFilters: currentFilters || null,
-        previousQuery: previousQuery || null, 
+        previousQuery: previousQuery || null,
       });
       setResult(data);
       setPreviousQuery(data.interpretedFilters || null);
@@ -255,8 +255,8 @@ export default function AskDataPanel({ currentFilters, onApplyFilters, onClearFi
           aria-label="Ask a question about donation data"
         />
         {question && (
-          <button 
-            className="ask-clear-btn" 
+          <button
+            className="ask-clear-btn"
             onClick={() => setQuestion("")}
             aria-label="Clear question"
           >

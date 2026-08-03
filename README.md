@@ -263,7 +263,7 @@ Warnings use plain, non-technical language and do not block map controls, filter
 
 ## Researcher Account Setup
 
-The user needs to navigate to `/login` and then `/register` where they register their university email (`.ca` or `.edu`) and password. Then the user is sent back to the login page to login.
+The user needs to navigate to `/login` and then `/register` where they register a University of Toronto email address and password. Then the user is sent back to the login page to log in.
 
 The backend requires a private `JWT_SECRET` in `server/.env`. Create this file
 from `server/.env.example` and replace the example value before running the

@@ -48,15 +48,6 @@ export default function Login() {
           <button type="submit">Log In</button>
         </form>
         <p style={{ marginTop: "16px", fontSize: "13px", textAlign: "center" }}>
-          <button
-            type="button"
-            className="text-link"
-            onClick={() => navigate("/forgot-password")}
-          >
-            Forgot your password?
-          </button>
-        </p>
-        <p style={{ marginTop: "8px", fontSize: "13px", textAlign: "center" }}>
           Don't have an account?{" "}
           <button
             type="button"
