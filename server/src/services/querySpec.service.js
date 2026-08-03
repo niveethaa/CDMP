@@ -9,7 +9,6 @@ const SUPPORTED_METRICS = [
   "donationCount",
   "donorCount",
   "averageDonation",
-  "perCapitaAmount",
 ];
 const SUPPORTED_GROUPS = [null, "party", "province", "riding", "year"];
 const SUPPORTED_SORT_ORDERS = ["desc", "asc"];

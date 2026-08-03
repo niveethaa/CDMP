@@ -45,7 +45,7 @@ function getBoundaryEndingYear(boundarySet) {
 
 function buildActiveFilterChips({ filters, viewLevel, selectedProvinceCode, activeBoundarySet }) {
   const partyCode = filters.partyCode || "ALL";
-  const metricLabel = filters.metricMode === "per_capita" ? "Per Capita" : "Total $";
+  const metricLabel = filters.metricMode === "donation_count" ? "Donation Count" : "Total $";
   const provinceName = selectedProvinceCode
     ? PROVINCE_NAMES[selectedProvinceCode] || selectedProvinceCode
     : null;

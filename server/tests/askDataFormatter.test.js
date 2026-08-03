@@ -88,18 +88,18 @@ describe("Ask Data answer formatter", () => {
     expect(answer).toContain("Liberal decreased by $200");
   });
 
-  it("explains when population data is unavailable", () => {
+  it("explains when a requested metric is unavailable", () => {
     const answer = formatAnswer(
-      query({ intent: "summary", metric: "perCapitaAmount" }),
+      query({ intent: "summary" }),
       [{
         label: "Canada",
         value: null,
         suppressed: false,
         unavailable: true,
-        unavailableReason: "Population data is unavailable for this selection.",
+        unavailableReason: "The requested metric is unavailable for this selection.",
       }],
     );
 
-    expect(answer).toBe("Population data is unavailable for this selection.");
+    expect(answer).toBe("The requested metric is unavailable for this selection.");
   });
 });

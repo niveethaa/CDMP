@@ -20,7 +20,7 @@ function optionsForPeriod(
     beginningYear,
     endingYear,
     partyCode,
-    metricMode: query.metric === "perCapitaAmount" ? "per_capita" : "total",
+    metricMode: "total",
     boundarySet: query.boundarySet || undefined,
   };
 }
@@ -100,22 +100,16 @@ function normalizePrivacy(privacy, fallbackDonorCount = 0) {
 
 function visibleRow(label, source, metric, privacy) {
   const normalizedPrivacy = normalizePrivacy(privacy, source?.donorCount);
-  const unavailable =
-    metric === "perCapitaAmount"
-    && Number(source?.population || 0) <= 0;
-  const unavailableReason = unavailable
-    ? "Population data is unavailable for this selection."
-    : "";
 
   return {
     label: label || "Unknown",
-    value: normalizedPrivacy.isSuppressed || unavailable
+    value: normalizedPrivacy.isSuppressed
       ? null
       : metricValue(source, metric),
     suppressed: normalizedPrivacy.isSuppressed,
     suppressionReason: normalizedPrivacy.reason,
-    unavailable,
-    unavailableReason,
+    unavailable: false,
+    unavailableReason: "",
   };
 }
 
@@ -143,9 +137,6 @@ function coverageNotes(query) {
     && (includesAllParties || selectedParties.some((code) => code !== "BQ"))
   ) {
     notes.push("The imported 2024 data currently includes Bloc Québécois records only.");
-  }
-  if (query.metric === "perCapitaAmount") {
-    notes.push("Population data is unavailable, so per-capita values cannot be calculated.");
   }
   return notes;
 }
@@ -200,7 +191,6 @@ function rankingRowsFromRegionStats(stats, query) {
 }
 
 function rankingRowsFromPartyStats(stats, query) {
-  const population = Number(stats?.totals?.population || 0);
   let partyStats = stats?.partyStats || [];
 
   if (query.partyCodes.length) {
@@ -213,10 +203,6 @@ function rankingRowsFromPartyStats(stats, query) {
     const source = {
       ...party,
       averageDonation: metricValue(party, "averageDonation"),
-      perCapitaAmount: population
-        ? Number(party.totalDonations || 0) / population
-        : 0,
-      population,
     };
     return visibleRow(
       party.partyName || party.partyCode,
@@ -388,40 +374,29 @@ function changeRow(label, startSource, endSource, metric, startPrivacy, endPriva
   );
   const suppressed =
     normalizedStartPrivacy.isSuppressed || normalizedEndPrivacy.isSuppressed;
-  const unavailable = metric === "perCapitaAmount" && (
-    Number(startSource?.population || 0) <= 0
-    || Number(endSource?.population || 0) <= 0
-  );
-  const startValue = suppressed || unavailable ? null : metricValue(startSource, metric);
-  const endValue = suppressed || unavailable ? null : metricValue(endSource, metric);
+  const startValue = suppressed ? null : metricValue(startSource, metric);
+  const endValue = suppressed ? null : metricValue(endSource, metric);
 
   return {
     label: label || "Unknown",
-    value: suppressed || unavailable ? null : endValue - startValue,
+    value: suppressed ? null : endValue - startValue,
     startValue,
     endValue,
     suppressed,
     suppressionReason: suppressed
       ? normalizedStartPrivacy.reason || normalizedEndPrivacy.reason
       : "",
-    unavailable,
-    unavailableReason: unavailable
-      ? "Population data is unavailable for this selection."
-      : "",
+    unavailable: false,
+    unavailableReason: "",
   };
 }
 
 function partySources(stats) {
-  const population = Number(stats?.totals?.population || 0);
   return new Map((stats?.partyStats || []).map((party) => [
     party.partyCode,
     {
       ...party,
       averageDonation: metricValue(party, "averageDonation"),
-      perCapitaAmount: population
-        ? Number(party.totalDonations || 0) / population
-        : 0,
-      population,
     },
   ]));
 }

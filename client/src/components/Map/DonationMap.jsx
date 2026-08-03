@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import { PARTY_COLORS } from "../../utils/partyColors";
-import { formatDollars } from "../../utils/format";
+import { formatDollars, formatCount as formatNumber } from "../../utils/format";
 
-function getDominantParty(partyStats) {
+function getMetricKey(metricMode) {
+  return metricMode === "donation_count" ? "donationCount" : "totalDonations";
+}
+
+function getDominantParty(partyStats, metricMode) {
   if (!partyStats || partyStats.length === 0) return null;
+  const metricKey = getMetricKey(metricMode);
   return partyStats.reduce((a, b) =>
-    (a.totalDonations || 0) > (b.totalDonations || 0) ? a : b,
+    (a[metricKey] || 0) > (b[metricKey] || 0) ? a : b,
   );
 }
 
@@ -63,12 +68,12 @@ function getRegionStyle({ feature, viewLevel, stats, selectedCode, metricMode })
     };
   }
 
-  const dominant = getDominantParty(stat.partyStats);
+  const dominant = getDominantParty(stat.partyStats, metricMode);
   const baseColor = dominant
     ? PARTY_COLORS[dominant.partyCode] || PARTY_COLORS.UNKNOWN
     : PARTY_COLORS.UNKNOWN;
 
-  const metricKey = metricMode === "per_capita" ? "perCapitaAmount" : "totalDonations";
+  const metricKey = getMetricKey(metricMode);
   const max = stats.reduce((m, s) => Math.max(m, s.totals?.[metricKey] || 0), 1);
   const ratio = (stat.totals?.[metricKey] || 0) / max;
   const opacity = 0.32 + ratio * 0.56;
@@ -85,14 +90,14 @@ function getRegionStyle({ feature, viewLevel, stats, selectedCode, metricMode })
 
 function buildTooltip({ info, stat, viewLevel, metricMode }) {
   const total = stat?.totals?.totalDonations || 0;
-  const perCapita = stat?.totals?.perCapitaAmount || 0;
+  const donationCount = stat?.totals?.donationCount || 0;
   const donors = stat?.totals?.donorCount || 0;
-  const dominant = getDominantParty(stat?.partyStats);
+  const dominant = getDominantParty(stat?.partyStats, metricMode);
   const hasStats = Boolean(stat);
 
   return `<div class="map-tooltip">
     <div class="tooltip-name">${escapeHtml(info.name)}</div>
-    ${hasStats ? `<div class="tooltip-total">${metricMode === "per_capita" ? `${formatDollars(perCapita)} per capita` : formatDollars(total)}</div>` : ""}
+    ${hasStats ? `<div class="tooltip-total">${metricMode === "donation_count" ? `${formatNumber(donationCount)} donations` : formatDollars(total)}</div>` : ""}
     ${donors ? `<div class="tooltip-sub">${Number(donors).toLocaleString("en-CA")} donors</div>` : ""}
     ${dominant ? `<div class="tooltip-party" style="color:${PARTY_COLORS[dominant.partyCode] || "#aaa"}">${escapeHtml(dominant.partyCode)} dominant</div>` : ""}
     ${!hasStats && isRidingMapView(viewLevel) ? `<div class="tooltip-sub">No donation summary loaded yet</div>` : ""}
@@ -358,7 +363,7 @@ export default function DonationMap({
       {activeGeoData && !geoError && !ridingGeoError && (
         <div className="map-legend">
           <div className="legend-title">
-            Dominant party · Shade = {metricMode === "per_capita" ? "per capita" : "volume"}
+            Dominant party · Shade = {metricMode === "donation_count" ? "donation count" : "donation amount"}
           </div>
           <div className="legend-items">
             {Object.entries(PARTY_COLORS)

@@ -38,10 +38,11 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
   const { region, totals = {}, partyStats = [], donationsTrend, privacy, filters } = stats;
   const visiblePartyStats = partyStats.filter((party) => party.partyCode?.toUpperCase() !== "UNKNOWN");
   const isNational = region?.level === "national";
-  const isPerCapita = filters?.metricMode === "per_capita";
+  const isDonationCount = filters?.metricMode === "donation_count";
   const isRiding = region?.level === "riding";
-  const maxParty = visiblePartyStats.reduce((m, p) => Math.max(m, p.totalDonations || 0), 1);
-  const trendMetricKey = isPerCapita ? "perCapitaAmount" : "totalDonations";
+  const partyMetricKey = isDonationCount ? "donationCount" : "totalDonations";
+  const maxParty = visiblePartyStats.reduce((m, p) => Math.max(m, p[partyMetricKey] || 0), 1);
+  const trendMetricKey = isDonationCount ? "donationCount" : "totalDonations";
   const maxTrend = (donationsTrend || []).reduce(
     (m, t) => Math.max(m, t[trendMetricKey] || 0),
     1,
@@ -86,13 +87,13 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
         <>
       <div className="stats-grid stats-grid--dashboard">
         <StatCard
-          label={isPerCapita ? "Per Capita" : "Total Donations"}
-          value={isPerCapita ? formatDollars(totals?.perCapitaAmount) : formatDollars(totals?.totalDonations)}
+          label={isDonationCount ? "Donation Count" : "Total Donations"}
+          value={isDonationCount ? formatNumber(totals?.donationCount) : formatDollars(totals?.totalDonations)}
           accent
         />
         <StatCard
-          label="Donation Count"
-          value={formatNumber(totals?.donationCount)}
+          label={isDonationCount ? "Total Donations" : "Donation Count"}
+          value={isDonationCount ? formatDollars(totals?.totalDonations) : formatNumber(totals?.donationCount)}
         />
         <StatCard
           label="Unique Donors"
@@ -102,12 +103,6 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
           label="Average Donation"
           value={formatDollars(totals?.averageDonation)}
         />
-        {isPerCapita && (
-          <StatCard
-            label="Total Donations"
-            value={formatDollars(totals?.totalDonations)}
-          />
-        )}
         {totals?.population ? (
           <StatCard
             label="Population"
@@ -123,7 +118,7 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
         </div>
         {visiblePartyStats.length > 0 ? (
           visiblePartyStats.map((p) => (
-            <PartyBar key={p.partyCode} party={p} maxTotal={maxParty} />
+            <PartyBar key={p.partyCode} party={p} maxValue={maxParty} metricMode={filters?.metricMode} />
           ))
         ) : (
           <div className="trend-empty">No party breakdown available for this selection.</div>
@@ -132,7 +127,7 @@ export default function RegionSummaryPanel({ stats, onBack, loading }) {
 
       <section className="panel-section">
         <div className="section-header-row">
-          <h3 className="section-title">{isPerCapita ? "Per-Capita Donations by Year" : "Donations by Year"}</h3>
+          <h3 className="section-title">{isDonationCount ? "Number of Donations by Year" : "Donations by Year"}</h3>
         </div>
         <TrendLineChart data={donationsTrend} maxTrend={maxTrend} metricMode={filters?.metricMode} />
       </section>
@@ -159,9 +154,10 @@ function TrendLineChart({ data, maxTrend, metricMode }) {
   const baseY = padTop + plotH;
   const baseX = padLeft;
   const niceMax = niceCeil(maxTrend);
-  const isPerCapita = metricMode === "per_capita";
-  const metricKey = isPerCapita ? "perCapitaAmount" : "totalDonations";
-  const yAxisTitle = isPerCapita ? "Per Capita (CAD)" : "Amount (CAD)";
+  const isDonationCount = metricMode === "donation_count";
+  const metricKey = isDonationCount ? "donationCount" : "totalDonations";
+  const yAxisTitle = isDonationCount ? "Donations" : "Amount (CAD)";
+  const formatMetric = isDonationCount ? formatNumber : formatDollars;
   const n = data.length;
   const xTickStep = Math.max(1, Math.ceil((n - 1) / 4));
   const x = (i) => padLeft + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
@@ -188,7 +184,7 @@ function TrendLineChart({ data, maxTrend, metricMode }) {
       className="trend-line-chart"
       viewBox={`0 0 ${W} ${H}`}
       role="img"
-      aria-label={isPerCapita ? "Per-capita donations by year line chart" : "Donations by year line chart"}
+      aria-label={isDonationCount ? "Number of donations by year line chart" : "Donations by year line chart"}
     >
       <defs>
         <linearGradient id="trendAreaFill" x1="0" y1="0" x2="0" y2="1">
@@ -203,7 +199,7 @@ function TrendLineChart({ data, maxTrend, metricMode }) {
           <g key={`y-${i}`}>
             <line x1={baseX} y1={ty} x2={W - padRight} y2={ty} className="trend-gridline" />
             <text x={baseX - 8} y={ty + 3} className="trend-axis-label" textAnchor="end">
-              {formatDollars(v)}
+              {formatMetric(v)}
             </text>
           </g>
         );
@@ -233,7 +229,7 @@ function TrendLineChart({ data, maxTrend, metricMode }) {
       {points.map((p) => (
         <g key={p.year} className="trend-point">
           <circle cx={p.cx} cy={p.cy} r="2.5" fill="#4361ee" stroke="#fff" strokeWidth="1" />
-          <title>{`${p.year}: ${formatDollars(p.metricValue)}`}</title>
+          <title>{`${p.year}: ${formatMetric(p.metricValue)}`}</title>
         </g>
       ))}
 
@@ -278,9 +274,11 @@ function StatCard({ label, value, accent }) {
   );
 }
 
-function PartyBar({ party, maxTotal }) {
+function PartyBar({ party, maxValue, metricMode }) {
   const color = PARTY_COLORS[party.partyCode] || PARTY_COLORS.UNKNOWN;
-  const pct = maxTotal > 0 ? (party.totalDonations / maxTotal) * 100 : 0;
+  const isDonationCount = metricMode === "donation_count";
+  const value = (isDonationCount ? party.donationCount : party.totalDonations) || 0;
+  const pct = maxValue > 0 ? (value / maxValue) * 100 : 0;
 
   return (
     <div className="party-row">
@@ -290,7 +288,7 @@ function PartyBar({ party, maxTotal }) {
         <div className="bar-fill" style={{ width: `${pct}%`, background: color }} />
       </div>
       <span className="party-amount">
-        {formatDollars(party.totalDonations)}
+        {isDonationCount ? formatNumber(value) : formatDollars(value)}
       </span>
     </div>
   );

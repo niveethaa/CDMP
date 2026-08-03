@@ -1,7 +1,7 @@
 import { getDefaultFilters } from "./boundarySets";
 
 const METRIC_MODE_MAP = {
-  perCapitaAmount: "per_capita",
+  donationCount: "donation_count",
 };
 
 function getMetricMode(metric) {
@@ -24,6 +24,7 @@ function isMapCompatible(interpretedFilters) {
   if (!interpretedFilters) return false;
   if (interpretedFilters.intent === "change") return false;
   if (interpretedFilters.intent === "comparison") return false;
+  if (interpretedFilters.metric === "perCapitaAmount") return false;
   if (interpretedFilters.partyCodes?.length > 1) return false;
   if (interpretedFilters.regionCodes?.length) return false;
   if (interpretedFilters.regionLevel === "riding" && !interpretedFilters.boundarySet) return false;

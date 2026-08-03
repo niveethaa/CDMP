@@ -77,7 +77,6 @@ function detectMetric(question) {
   if (/\b(?:average|mean)\s+(?:donation|gift|contribution)/i.test(question)) {
     return "averageDonation";
   }
-  if (/\b(?:per[ -]?capita|per person)/i.test(question)) return "perCapitaAmount";
   if (/\b(?:donor|donors|supporter|supporters|contributors)\s+(?:count|counts|number)?/i.test(question)
     || /\bhow many\b[^?]{0,40}\b(?:donors|supporters|contributors)\b/i.test(question)) {
     return "donorCount";

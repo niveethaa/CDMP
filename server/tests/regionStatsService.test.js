@@ -53,6 +53,16 @@ describe("regionStats.service serve-time suppression", () => {
       expect(result.partyStats.length).toBeGreaterThan(0);
       expect(result.donationsTrend.length).toBeGreaterThan(0);
     });
+
+    it("preserves donation count mode for map responses", () => {
+      const result = combineRegionStatDocuments([makeDoc(5)], {
+        metricMode: "donation_count",
+      });
+
+      expect(result.filters.metricMode).toBe("donation_count");
+      expect(result.totals.donationCount).toBe(5);
+      expect(result.donationsTrend[0].donationCount).toBe(5);
+    });
   });
 
   describe("redactSuppressedStats", () => {

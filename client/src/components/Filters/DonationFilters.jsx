@@ -12,7 +12,7 @@ import { PARTIES } from "../../utils/parties";
 
 const METRIC_MODES = [
   { code: "total", name: "Total $" },
-  { code: "per_capita", name: "Per capita" },
+  { code: "donation_count", name: "Donation count" },
 ];
 
 const MIN_YEAR = DATA_MIN_YEAR;

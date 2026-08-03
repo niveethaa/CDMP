@@ -70,7 +70,7 @@ function normalizeStatsOptions(options = {}) {
     endingYear: Math.max(safeBeginningYear, safeEndingYear),
     partyCode: String(options.partyCode || DEFAULT_PARTY_CODE).toUpperCase(),
     metricMode:
-      options.metricMode === "per_capita" ? "per_capita" : DEFAULT_METRIC_MODE,
+      options.metricMode === "donation_count" ? "donation_count" : DEFAULT_METRIC_MODE,
     boundarySet: options.boundarySet || undefined,
   };
 }

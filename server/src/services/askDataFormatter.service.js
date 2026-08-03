@@ -1,7 +1,6 @@
 const DOLLAR_METRICS = new Set([
   "totalDonations",
   "averageDonation",
-  "perCapitaAmount",
 ]);
 
 const METRIC_LABELS = Object.freeze({
@@ -9,7 +8,6 @@ const METRIC_LABELS = Object.freeze({
   donationCount: "donations",
   donorCount: "donors",
   averageDonation: "average donation",
-  perCapitaAmount: "per-capita donations",
 });
 
 function formatDollars(value) {

@@ -92,6 +92,12 @@ describe("QuerySpec validation", () => {
     ).toThrow("beginningYear cannot be after endingYear");
   });
 
+  it("rejects per-capita metrics", () => {
+    expect(() =>
+      validateQuerySpec(validSummary({ metric: "perCapitaAmount" })),
+    ).toThrow("Unsupported metric");
+  });
+
   it("rejects unknown fields and MongoDB operators", () => {
     for (const unsafeField of ["$where", "$match", "$regex"]) {
       try {

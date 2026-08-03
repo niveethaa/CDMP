@@ -131,7 +131,7 @@ Ask CDMP supports aggregate questions including:
 - comparisons across two to six parties, two to ten provinces, or two years
 - single-party and multi-party donation trends
 - party and province donation changes between two endpoint years
-- total amount, donation count, donor count, average donation, and per-capita metrics
+- total amount, donation count, donor count, and average donation metrics
 
 Questions requesting individual donor records, raw database access, multiple
 metrics in one answer, or operations that change data are not supported.
@@ -139,8 +139,8 @@ metrics in one answer, or operations that change data are not supported.
 Ask CDMP includes coverage notes when a requested period contains known gaps in
 the imported data. The current import excludes CPC records in 2020 and LPC
 records in 2021, while 2024 currently contains BQ records only. Population
-values have not been loaded, so per-capita questions return an unavailable
-message instead of a misleading zero until that reference data is added.
+values have not been loaded, so per-capita questions are unsupported. Ask about
+donation counts instead.
 
 ## Tests
 

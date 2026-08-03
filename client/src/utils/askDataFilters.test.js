@@ -29,6 +29,10 @@ describe("askDataFilters", () => {
       expect(isMapCompatible({ regionLevel: "riding" })).toBe(false);
     });
 
+    it("returns false for per-capita results", () => {
+      expect(isMapCompatible({ metric: "perCapitaAmount" })).toBe(false);
+    });
+
     it("returns true for a simple compatible filter", () => {
       expect(
         isMapCompatible({ intent: "summary", partyCodes: ["CPC"] })
@@ -54,9 +58,9 @@ describe("askDataFilters", () => {
       expect(result.metricMode).toBe("total");
     });
 
-    it("maps per-capita metric correctly", () => {
-      const result = convertToMapFilters({ metric: "perCapitaAmount" });
-      expect(result.metricMode).toBe("per_capita");
+    it("maps donation count metric correctly", () => {
+      const result = convertToMapFilters({ metric: "donationCount" });
+      expect(result.metricMode).toBe("donation_count");
     });
 
     it("defaults partyCode to ALL when no parties given", () => {

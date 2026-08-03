@@ -39,14 +39,14 @@ describe("Region API routes (UC1/UC2)", () => {
     it("passes query params through to the service", async () => {
       getNationalStats.mockResolvedValue(fakeStat);
       await request(app).get(
-        "/api/regions/national?partyCode=CPC&beginningYear=2015&endingYear=2024&metricMode=per_capita"
+        "/api/regions/national?partyCode=CPC&beginningYear=2015&endingYear=2024&metricMode=donation_count"
       );
       expect(getNationalStats).toHaveBeenCalledWith(
         expect.objectContaining({
           partyCode: "CPC",
           beginningYear: "2015",
           endingYear: "2024",
-          metricMode: "per_capita",
+          metricMode: "donation_count",
         })
       );
     });

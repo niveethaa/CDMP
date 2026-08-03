@@ -37,8 +37,9 @@ requests remain outside the feature.
 
 Ask CDMP displays coverage warnings for known gaps in the imported data: CPC
 records are absent in 2020, LPC records are absent in 2021, and the current 2024
-import contains BQ records only. Population values are not loaded, so
-per-capita answers are shown as unavailable rather than zero.
+import contains BQ records only. The public map supports donation amount and
+donation count views. Per-capita questions are unsupported because population
+data is not included.
 
 See [server/README.md](./server/README.md) for complete provider examples and
 local backend setup, [client/README.md](./client/README.md) for frontend setup,

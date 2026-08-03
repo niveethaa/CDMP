@@ -250,7 +250,7 @@ function buildSystemPrompt() {
     "Use uppercase party and province codes.",
     "Every aggregate summary, ranking, trend, comparison, and change that fits QuerySpec is supported. Do not return supported false merely because the question includes a party, province, metric, or year filter.",
     "A summary asks for one aggregate value. It always uses groupBy null, zero or one partyCode, and limit 1.",
-    "Map amount, money, funding, fundraising, raised, received, and contributed money to totalDonations; count or number of donations, gifts, contributions, or contribution count to donationCount; number of donors, supporters, or contributors to donorCount; average donation or average gift to averageDonation; and per-capita or per-person amount to perCapitaAmount.",
+    "Map amount, money, funding, fundraising, raised, received, and contributed money to totalDonations; count or number of donations, gifts, contributions, or contribution count to donationCount; number of donors, supporters, or contributors to donorCount; and average donation or average gift to averageDonation.",
     "Every supported metric can be used with summaries, rankings, trends, comparisons, and change queries. An average donation comparison is one metric, not a multi-metric request.",
     "Chart, plot, track, over time, and each year request a trend with groupBy year.",
     "A single named province always uses regionLevel province, regionCode and provinceCode set to that province code, and an empty regionCodes array.",
@@ -467,6 +467,13 @@ async function interpretQuestion(
       "INVALID_QUESTION",
       "A question is required.",
     );
+  }
+
+  if (/\b(?:per[ -]?capita|per person)\b/i.test(question)) {
+    return {
+      supported: false,
+      reason: "Per-capita questions are not supported because population data is unavailable. Ask about donation counts instead.",
+    };
   }
 
   let normalizedPreviousQuery = null;

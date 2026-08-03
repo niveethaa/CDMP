@@ -487,6 +487,20 @@ describe("Ask Data natural-language interpreter", () => {
     });
   });
 
+  it("rejects per-capita questions without calling the provider", async () => {
+    const provider = {
+      generateJson: jest.fn(),
+    };
+
+    await expect(
+      interpretQuestion({ question: "What were donations per capita in Ontario in 2023?" }, { provider }),
+    ).resolves.toEqual({
+      supported: false,
+      reason: "Per-capita questions are not supported because population data is unavailable. Ask about donation counts instead.",
+    });
+    expect(provider.generateJson).not.toHaveBeenCalled();
+  });
+
   it("uses the validated fallback after an unsupported aggregate response", async () => {
     const provider = {
       generateJson: jest.fn()

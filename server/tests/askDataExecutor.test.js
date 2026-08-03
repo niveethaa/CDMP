@@ -359,25 +359,10 @@ describe("Ask Data QuerySpec executor", () => {
     expect(result.privacy.isSuppressed).toBe(true);
   });
 
-  it("marks per-capita results unavailable when population is missing", async () => {
-    regionStats.getRegionStats.mockResolvedValue(stats({ population: 0 }));
-
-    const result = await executeQuerySpec(summaryQuery({
+  it("rejects per-capita metrics", async () => {
+    await expect(executeQuerySpec(summaryQuery({
       metric: "perCapitaAmount",
-      beginningYear: 2022,
-      endingYear: 2023,
-    }));
-
-    expect(result.rows[0]).toMatchObject({
-      value: null,
-      suppressed: false,
-      unavailable: true,
-      unavailableReason: "Population data is unavailable for this selection.",
-    });
-    expect(result.coverage).toMatchObject({
-      isComplete: false,
-      notes: ["Population data is unavailable, so per-capita values cannot be calculated."],
-    });
+    }))).rejects.toThrow("Unsupported metric");
   });
 
   it("reports known gaps in the imported party-year data", async () => {

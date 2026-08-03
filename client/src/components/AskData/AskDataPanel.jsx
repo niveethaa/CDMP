@@ -38,7 +38,7 @@ function formatDollars(amount) {
 function formatRowValue(value, metric) {
   if (value === null || value === undefined) return "—";
   const amount = Number(value);
-  const isDollar = ["totalDonations", "averageDonation", "perCapitaAmount"].includes(metric || "");
+  const isDollar = ["totalDonations", "averageDonation"].includes(metric || "");
   return isDollar ? formatDollars(amount) : amount.toLocaleString("en-CA");
 }
 
@@ -48,7 +48,6 @@ function formatMetricLabel(metric) {
     donationCount: "Donation Count",
     donorCount: "Donor Count",
     averageDonation: "Average Donation",
-    perCapitaAmount: "Per Capita",
   };
   return labels[metric] || metric;
 }
