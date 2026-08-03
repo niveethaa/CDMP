@@ -1,13 +1,17 @@
 # Data Package Guide
 
-Large data files are intentionally excluded from GitHub and Docker images. Share
-them separately through Google Drive or another large-file storage service.
+Large data files are intentionally excluded from GitHub and Docker images. They
+are shared separately through Google Drive.
 
 The current upload package is:
 
 ```text
 course-project-nacss-drive-upload-2026-07-10.zip
 ```
+
+Download the data package from Google Drive:
+
+[Download `course-project-nacss-drive-upload-2026-07-10.zip`](https://drive.google.com/file/d/1xQCDA2nmejBIbpYF7N54gwZZ8EDKnb5G/view?usp=drive_link)
 
 Unzip it from the project root so the paths below land in the expected places:
 
@@ -152,9 +156,9 @@ Riding Regions by Boundary Set:
 - `mongo-dump/`
 - `*.archive`
 - `*.bson`
-- generated `postal_riding*` CSV files
-- PCFRF source zip files
-- GeoGratis riding source zip files
+- Generated `postal_riding*` CSV files
+- PCFRF source ZIP files
+- GeoGratis riding source ZIP files
 
 The frontend static JSON files under `client/public/data/` are small enough to
 stay in Git and are served by the client container.

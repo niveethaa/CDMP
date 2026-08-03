@@ -2,13 +2,13 @@
 
 This setup is intended for local grading, demo, and reproducible handoff. GitHub
 contains the application code and Docker configuration. Large data artifacts stay
-outside GitHub and should be shared separately, for example through Google Drive.
-The Docker setup uses a local MongoDB container instead of MongoDB Atlas.
+outside GitHub and should be shared separately through Google Drive. The Docker
+setup uses a local MongoDB container instead of MongoDB Atlas.
 
 ## Prerequisites
 
 - Docker Desktop
-- The Google Drive upload zip, which contains the MongoDB dump and raw data
+- The Google Drive upload ZIP, which contains the MongoDB dump and raw data
 
 Expected local ports:
 
@@ -31,12 +31,13 @@ This is the path a professor should use for grading or demo.
 2. Clone the repository.
 
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/UTSC-CSCC01-Software-Engineering-I/course-project-nacss.git
    cd course-project-nacss
    ```
 
-3. Download `course-project-nacss-drive-upload-2026-07-10.zip` from Google
-   Drive into the project root and unzip it.
+3. Download
+   [`course-project-nacss-drive-upload-2026-07-10.zip`](https://drive.google.com/file/d/1xQCDA2nmejBIbpYF7N54gwZZ8EDKnb5G/view?usp=drive_link)
+   from Google Drive into the project root and unzip it.
 
    ```bash
    unzip -n course-project-nacss-drive-upload-2026-07-10.zip
@@ -48,7 +49,7 @@ This is the path a professor should use for grading or demo.
    mongo-dump/course_project_nacss.archive
    ```
 
-   The zip and archive are large and should stay in Google Drive, not GitHub.
+   The ZIP and archive are large and should stay in Google Drive, not GitHub.
 
 4. Start the containers.
 
@@ -107,8 +108,9 @@ The `data-importer` service mounts both `./data` and
 `./client/public/data/ridings`, so regenerated mapping CSVs and riding GeoJSON
 persist in the working tree.
 
-1. Download and unzip `course-project-nacss-drive-upload-2026-07-10.zip` into
-   the project root.
+1. Download and unzip
+   [`course-project-nacss-drive-upload-2026-07-10.zip`](https://drive.google.com/file/d/1xQCDA2nmejBIbpYF7N54gwZZ8EDKnb5G/view?usp=drive_link)
+   into the project root.
 
    ```bash
    unzip -n course-project-nacss-drive-upload-2026-07-10.zip
@@ -136,7 +138,7 @@ persist in the working tree.
    data/reference/postal_riding_mapping_sources.csv
    ```
 
-   The zip already includes `postal_riding_mappings.csv`, so this step can be
+   The ZIP already includes `postal_riding_mappings.csv`, so this step can be
    skipped unless you want to prove the Python normalization step. To regenerate
    the CSV from the included PCFRF source files:
 
@@ -279,9 +281,9 @@ client/public/data/ridings/
     federal_ridings_1996/
 ```
 
-Google Drive links:
+Google Drive link:
 
-- Full data package zip: `<insert Google Drive link>`
+- [Download the full data package ZIP](https://drive.google.com/file/d/1xQCDA2nmejBIbpYF7N54gwZZ8EDKnb5G/view?usp=drive_link)
 
 ## Refreshing the Upload Package
 
@@ -312,10 +314,18 @@ Mongo dump, or generated PCFRF files to GitHub.
 
 ## Troubleshooting
 
-- If restore fails with `archive not found`, confirm the file is at `mongo-dump/course_project_nacss.archive`.
-- If map or dashboard APIs return empty data, restore the Mongo dump or run the full import pipeline.
-- If `import:postal-riding-mappings` fails, confirm `data/reference/postal_riding_mappings.csv` exists.
-- If `seed:riding-regions` fails with a missing manifest, confirm `client/public/data/ridings/manifest.json` exists after unzipping the data package.
-- If the full rebuild cannot find raw donation files, confirm the zip was extracted from the project root.
-- If Docker build fails in `client`, run `cd client && npm install` locally to refresh missing dependencies, then rebuild.
-- If you need to reset all imported data, run `docker compose down -v` and restore the dump again.
+- If the restore fails with `archive not found`, confirm the file is at
+  `mongo-dump/course_project_nacss.archive`.
+- If map or dashboard APIs return empty data, restore the MongoDB dump or run
+  the full import pipeline.
+- If `import:postal-riding-mappings` fails, confirm
+  `data/reference/postal_riding_mappings.csv` exists.
+- If `seed:riding-regions` fails with a missing manifest, confirm
+  `client/public/data/ridings/manifest.json` exists after unzipping the data
+  package.
+- If the full rebuild cannot find raw donation files, confirm the ZIP was
+  extracted from the project root.
+- If the Docker build fails in `client`, run `cd client && npm install` locally
+  to refresh missing dependencies, then rebuild.
+- If you need to reset all imported data, run `docker compose down -v` and
+  restore the dump again.
