@@ -75,6 +75,141 @@ describe("Ask Data natural-language interpreter", () => {
     expect(prompt).toContain("copy every unchanged field from previousQuery");
     expect(prompt).toContain("All-party comparisons use all six party codes");
     expect(prompt).toContain("A trend for all, every, or each party as separate series");
+    expect(prompt).toContain("latest broadly comparable year");
+    expect(prompt).toContain("Never replace a named riding with its province");
+    expect(prompt).toContain("federal_ridings_1996 for riding years 1997-2003");
+  });
+
+  it("applies the latest complete default year when no period is stated", async () => {
+    const provider = {
+      generateJson: jest.fn().mockResolvedValue(validModelOutput({
+        regionLevel: "national",
+        regionCode: null,
+        provinceCode: null,
+        beginningYear: 1993,
+        endingYear: 2024,
+      })),
+    };
+
+    const result = await interpretQuestion(
+      { question: "How much was donated nationally?" },
+      { provider },
+    );
+
+    expect(result.querySpec).toMatchObject({
+      beginningYear: 2023,
+      endingYear: 2023,
+    });
+    const context = JSON.parse(provider.generateJson.mock.calls[0][0].userPrompt);
+    expect(context.defaultPeriod).toEqual({
+      beginningYear: 2023,
+      endingYear: 2023,
+      trendBeginningYear: 2019,
+    });
+  });
+
+  it("applies the five-year default period to a trend", async () => {
+    const provider = {
+      generateJson: jest.fn().mockResolvedValue(validModelOutput({
+        intent: "trend",
+        groupBy: "year",
+        regionLevel: "national",
+        regionCode: null,
+        provinceCode: null,
+        beginningYear: 1993,
+        endingYear: 2024,
+      })),
+    };
+
+    const result = await interpretQuestion(
+      { question: "Show the national donation trend." },
+      { provider },
+    );
+
+    expect(result.querySpec).toMatchObject({
+      beginningYear: 2019,
+      endingYear: 2023,
+    });
+  });
+
+  it("restores a resolved riding when the model broadens it to a province", async () => {
+    const provider = {
+      generateJson: jest.fn().mockResolvedValue(validModelOutput({
+        intent: "comparison",
+        groupBy: "party",
+        partyCodes: ["LPC", "CPC"],
+        regionLevel: "province",
+        regionCode: "ON",
+        provinceCode: "ON",
+        beginningYear: 2023,
+        endingYear: 2023,
+        limit: 2,
+      })),
+    };
+    const ridingResolver = jest.fn().mockResolvedValue({
+      ambiguous: false,
+      name: "Ajax",
+      provinceCode: "ON",
+      boundarySet: "federal_ridings_2013",
+      matches: [],
+    });
+
+    const result = await interpretQuestion(
+      { question: "Compare Liberal and Conservative donations in Ajax, Ontario in 2023." },
+      { provider, ridingResolver },
+    );
+
+    expect(result.querySpec).toMatchObject({
+      regionLevel: "riding",
+      regionCode: "AJAX",
+      provinceCode: "ON",
+      boundarySet: "federal_ridings_2013",
+    });
+  });
+
+  it("preserves riding scope and applies the change default for an elliptical follow-up", async () => {
+    const provider = {
+      generateJson: jest.fn().mockResolvedValue(validModelOutput({
+        intent: "change",
+        groupBy: "party",
+        partyCodes: [],
+        regionLevel: "national",
+        regionCode: null,
+        provinceCode: null,
+        beginningYear: 2023,
+        endingYear: 2024,
+        limit: 1,
+      })),
+    };
+    const previousQuery = {
+      ...JSON.parse(validModelOutput()).querySpec,
+      partyCodes: [],
+      regionLevel: "riding",
+      regionCode: "Ajax",
+      provinceCode: "ON",
+      beginningYear: 2023,
+      endingYear: 2023,
+      boundarySet: "federal_ridings_2013",
+      limit: 1,
+    };
+
+    const result = await interpretQuestion(
+      {
+        question: "Which party increased the most?",
+        previousQuery,
+      },
+      { provider },
+    );
+
+    expect(result.querySpec).toMatchObject({
+      intent: "change",
+      regionLevel: "riding",
+      regionCode: "AJAX",
+      provinceCode: "ON",
+      beginningYear: 2019,
+      endingYear: 2023,
+      boundarySet: "federal_ridings_2013",
+    });
   });
 
   it("accepts and normalizes a party ranking", async () => {
@@ -248,6 +383,26 @@ describe("Ask Data natural-language interpreter", () => {
     expect(trend.partyCodes).toEqual(["LPC", "CPC", "NDP", "BQ", "GPC", "PPC"]);
   });
 
+  it("canonicalizes an explicitly singular riding ranking", () => {
+    expect(canonicalizeModelQuerySpec({
+      intent: "ranking",
+      metric: "averageDonation",
+      groupBy: "riding",
+      partyCodes: [],
+      regionCodes: [],
+      regionLevel: "riding",
+      regionCode: null,
+      provinceCode: "ON",
+      beginningYear: 2023,
+      endingYear: 2023,
+      boundarySet: "federal_ridings_2013",
+      limit: 5,
+      sortOrder: "asc",
+    }, "Which Ontario riding had the lowest average donation in 2023?")).toMatchObject({
+      limit: 1,
+    });
+  });
+
   it("recovers a safe all-party QuerySpec when the model contradicts itself", async () => {
     const provider = {
       generateJson: jest.fn().mockResolvedValue(JSON.stringify({
@@ -330,6 +485,36 @@ describe("Ask Data natural-language interpreter", () => {
       supported: false,
       reason: "This question is outside the supported CDMP aggregate queries.",
     });
+  });
+
+  it("uses the validated fallback after an unsupported aggregate response", async () => {
+    const provider = {
+      generateJson: jest.fn()
+        .mockResolvedValueOnce('{"supported":false}')
+        .mockResolvedValueOnce(validModelOutput({
+          metric: "donationCount",
+          partyCodes: ["NDP"],
+          regionLevel: "province",
+          regionCode: "BC",
+          provinceCode: "BC",
+          beginningYear: 2019,
+          endingYear: 2022,
+        })),
+    };
+
+    const result = await interpretQuestion(
+      { question: "How many NDP donations were made in British Columbia from 2019 to 2022?" },
+      { provider },
+    );
+
+    expect(result.querySpec).toMatchObject({
+      metric: "donationCount",
+      partyCodes: ["NDP"],
+      regionCode: "BC",
+      beginningYear: 2019,
+      endingYear: 2022,
+    });
+    expect(provider.generateJson).toHaveBeenCalledTimes(1);
   });
 
   it("rejects malformed model JSON", async () => {

@@ -43,7 +43,10 @@ function getAlternateYear(beginningYear, endingYear) {
 
 function buildRegionContext(querySpec) {
   if (querySpec.regionLevel === "riding" && querySpec.provinceCode) {
-    return `in ${PROVINCE_NAMES[querySpec.provinceCode] || querySpec.provinceCode}`;
+    const province = PROVINCE_NAMES[querySpec.provinceCode] || querySpec.provinceCode;
+    return querySpec.regionCode
+      ? `in ${querySpec.regionCode}, ${province}`
+      : `in ${province}`;
   }
   if (querySpec.regionLevel === "province" && querySpec.regionCode) {
     return `in ${PROVINCE_NAMES[querySpec.regionCode] || querySpec.regionCode}`;

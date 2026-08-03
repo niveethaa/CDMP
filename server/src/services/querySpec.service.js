@@ -1,5 +1,7 @@
 const DATA_BEGINNING_YEAR = 1993;
 const DATA_ENDING_YEAR = 2024;
+const DEFAULT_QUERY_YEAR = 2023;
+const DEFAULT_TREND_BEGINNING_YEAR = 2019;
 
 const SUPPORTED_INTENTS = ["summary", "ranking", "trend", "comparison", "change"];
 const SUPPORTED_METRICS = [
@@ -119,8 +121,10 @@ function validateQuerySpec(input) {
   const metric = input.metric || "totalDonations";
   const groupBy = input.groupBy === undefined ? null : input.groupBy;
   let regionLevel = input.regionLevel || "national";
-  const beginningYear = input.beginningYear ?? DATA_BEGINNING_YEAR;
-  const endingYear = input.endingYear ?? DATA_ENDING_YEAR;
+  const usesDefaultRange = ["trend", "change"].includes(input.intent);
+  const beginningYear = input.beginningYear
+    ?? (usesDefaultRange ? DEFAULT_TREND_BEGINNING_YEAR : DEFAULT_QUERY_YEAR);
+  const endingYear = input.endingYear ?? DEFAULT_QUERY_YEAR;
   const limit = input.limit ?? 5;
   const sortOrder = input.sortOrder || "desc";
   const boundarySet = input.boundarySet || null;
@@ -375,6 +379,8 @@ module.exports = {
   ALLOWED_FIELDS,
   DATA_BEGINNING_YEAR,
   DATA_ENDING_YEAR,
+  DEFAULT_QUERY_YEAR,
+  DEFAULT_TREND_BEGINNING_YEAR,
   QuerySpecValidationError,
   RIDING_BOUNDARY_SETS,
   SUPPORTED_GROUPS,

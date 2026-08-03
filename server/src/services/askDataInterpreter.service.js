@@ -2,6 +2,8 @@ const {
   ALLOWED_FIELDS,
   DATA_BEGINNING_YEAR,
   DATA_ENDING_YEAR,
+  DEFAULT_QUERY_YEAR,
+  DEFAULT_TREND_BEGINNING_YEAR,
   QuerySpecValidationError,
   RIDING_BOUNDARY_SETS,
   SUPPORTED_GROUPS,
@@ -13,6 +15,13 @@ const {
   SUPPORTED_SORT_ORDERS,
   validateQuerySpec,
 } = require("./querySpec.service");
+const {
+  boundarySetForPeriod,
+  resolveRidingContext,
+} = require("./ridingContext.service");
+const {
+  buildFallbackQuerySpec,
+} = require("./askDataFallback.service");
 const {
   createAIProvider,
 } = require("./aiProviders/providerFactory");
@@ -157,6 +166,70 @@ function normalizeQuestionForModel(question) {
   );
 }
 
+function explicitYears(question) {
+  return [...String(question || "").matchAll(/\b(?:19|20)\d{2}\b/g)]
+    .map((match) => Number(match[0]))
+    .filter((year) => year >= DATA_BEGINNING_YEAR && year <= DATA_ENDING_YEAR);
+}
+
+function periodForQuestion(question, previousQuery = null) {
+  const years = explicitYears(question);
+  if (years.length) {
+    return {
+      beginningYear: Math.min(...years),
+      endingYear: Math.max(...years),
+      isDefault: false,
+    };
+  }
+  if (previousQuery) {
+    return {
+      beginningYear: previousQuery.beginningYear,
+      endingYear: previousQuery.endingYear,
+      isDefault: false,
+    };
+  }
+  return {
+    beginningYear: DEFAULT_QUERY_YEAR,
+    endingYear: DEFAULT_QUERY_YEAR,
+    isDefault: true,
+  };
+}
+
+function requestsGeographicOverride(question) {
+  return /\b(?:canada|national|nationally|nationwide|alberta|british columbia|manitoba|new brunswick|newfoundland(?: and labrador)?|nova scotia|northwest territories|nunavut|ontario|prince edward island|quebec|saskatchewan|yukon)\b/i
+    .test(String(question || ""));
+}
+
+function looksLikeAggregateQuestion(question) {
+  return /\b(?:donat|donor|contribut|fundrais|party|parties|province|provinces|riding|ridings|average gift|per capita)\w*/i
+    .test(String(question || ""));
+}
+
+function requestedResultLimit(question) {
+  const text = String(question || "");
+  const digit = text.match(/\b(?:10|[1-9])\b/);
+  if (digit) return Number(digit[0]);
+  const words = {
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+  };
+  for (const [word, value] of Object.entries(words)) {
+    if (new RegExp(`\\b${word}\\b`, "i").test(text)) return value;
+  }
+  if (/\bwhich\b[^?]{0,40}\b(?:party|province|riding|year)\b(?!s)/i.test(text)) {
+    return 1;
+  }
+  return null;
+}
+
 function buildSystemPrompt() {
   return [
     "You translate questions about CDMP political donation aggregates into JSON.",
@@ -172,6 +245,7 @@ function buildSystemPrompt() {
     `Province codes: ${SUPPORTED_PROVINCE_CODES.join(", ")}.`,
     `Sort orders: ${SUPPORTED_SORT_ORDERS.join(", ")}.`,
     `Data coverage: ${DATA_BEGINNING_YEAR}-${DATA_ENDING_YEAR}.`,
+    `If no year or period is stated, use ${DEFAULT_QUERY_YEAR} for summaries, rankings, and comparisons. Use ${DEFAULT_TREND_BEGINNING_YEAR}-${DEFAULT_QUERY_YEAR} for trends and changes. ${DEFAULT_QUERY_YEAR} is the latest broadly comparable year in the imported data.`,
     `Riding boundary sets: ${JSON.stringify(RIDING_BOUNDARY_SETS)}.`,
     "Use uppercase party and province codes.",
     "Every aggregate summary, ranking, trend, comparison, and change that fits QuerySpec is supported. Do not return supported false merely because the question includes a party, province, metric, or year filter.",
@@ -194,9 +268,15 @@ function buildSystemPrompt() {
     "Questions asking which party, the top party, or the party with the most or highest value are rankings: use intent ranking, groupBy party, and an empty partyCodes array so all parties are ranked.",
     "A province ranking uses groupBy province and regionLevel province.",
     "Questions asking which ridings, the top ridings, or the ridings with the most or highest value are rankings: use intent ranking, groupBy riding, regionLevel riding, regionCode null, the named provinceCode, and a year-compatible boundarySet.",
-    "A question about one named riding uses regionLevel riding, its riding name or code as regionCode, its provinceCode, and a year-compatible boundarySet.",
+    "A question about one named riding always remains at regionLevel riding for summaries, party rankings, trends, party comparisons, year comparisons, and party changes. Use its riding name or code as regionCode, its provinceCode, and a year-compatible boundarySet. Never replace a named riding with its province.",
+    "Use federal_ridings_1996 for riding years 1997-2003, federal_ridings_2003 for 2004-2014, and federal_ridings_2013 for 2015-2024.",
+    "If resolvedRiding is present in the user context and is not ambiguous, treat its name, provinceCode, and boundarySet as authoritative. If it lists multiple matches, do not guess which riding the user intended.",
     'Example: "Which party received the most donations nationally in 2024?" uses {"intent":"ranking","metric":"totalDonations","groupBy":"party","partyCodes":[],"regionCodes":[],"regionLevel":"national","regionCode":null,"provinceCode":null,"beginningYear":2024,"endingYear":2024,"boundarySet":null,"limit":1,"sortOrder":"desc"}.',
     'Example: "Which ridings in Ontario had the most NDP donations in 2024?" uses {"intent":"ranking","metric":"totalDonations","groupBy":"riding","partyCodes":["NDP"],"regionCodes":[],"regionLevel":"riding","regionCode":null,"provinceCode":"ON","beginningYear":2024,"endingYear":2024,"boundarySet":"federal_ridings_2013","limit":5,"sortOrder":"desc"}.',
+    'Example: "Which Quebec ridings had the most Bloc donations in 2010?" uses {"intent":"ranking","metric":"totalDonations","groupBy":"riding","partyCodes":["BQ"],"regionCodes":[],"regionLevel":"riding","regionCode":null,"provinceCode":"QC","beginningYear":2010,"endingYear":2010,"boundarySet":"federal_ridings_2003","limit":5,"sortOrder":"desc"}.',
+    'Example: "Which five ridings in Saskatchewan had the most donations in 2000?" uses {"intent":"ranking","metric":"totalDonations","groupBy":"riding","partyCodes":[],"regionCodes":[],"regionLevel":"riding","regionCode":null,"provinceCode":"SK","beginningYear":2000,"endingYear":2000,"boundarySet":"federal_ridings_1996","limit":5,"sortOrder":"desc"}.',
+    'Example: "Compare Liberal and Conservative donations in Ajax, Ontario in 2023" uses {"intent":"comparison","metric":"totalDonations","groupBy":"party","partyCodes":["LPC","CPC"],"regionCodes":[],"regionLevel":"riding","regionCode":"Ajax","provinceCode":"ON","beginningYear":2023,"endingYear":2023,"boundarySet":"federal_ridings_2013","limit":2,"sortOrder":"desc"}.',
+    'Example: "Rank all parties by donations in Ajax, Ontario in 2023" uses {"intent":"ranking","metric":"totalDonations","groupBy":"party","partyCodes":[],"regionCodes":[],"regionLevel":"riding","regionCode":"Ajax","provinceCode":"ON","beginningYear":2023,"endingYear":2023,"boundarySet":"federal_ridings_2013","limit":6,"sortOrder":"desc"}.',
     'Example: "How much did the Liberal Party receive in Ontario in 2023" uses {"intent":"summary","metric":"totalDonations","groupBy":null,"partyCodes":["LPC"],"regionCodes":[],"regionLevel":"province","regionCode":"ON","provinceCode":"ON","beginningYear":2023,"endingYear":2023,"boundarySet":null,"limit":1,"sortOrder":"desc"}.',
     'Example: "How much was donated across Canada from 2020 to 2024" uses {"intent":"summary","metric":"totalDonations","groupBy":null,"partyCodes":[],"regionCodes":[],"regionLevel":"national","regionCode":"CA","provinceCode":null,"beginningYear":2020,"endingYear":2024,"boundarySet":null,"limit":1,"sortOrder":"desc"}.',
     'Example: "How many donors gave to the NDP in British Columbia in 2023" uses {"intent":"summary","metric":"donorCount","groupBy":null,"partyCodes":["NDP"],"regionCodes":[],"regionLevel":"province","regionCode":"BC","provinceCode":"BC","beginningYear":2023,"endingYear":2023,"boundarySet":null,"limit":1,"sortOrder":"desc"}.',
@@ -224,11 +304,19 @@ function buildSystemPrompt() {
   ].join("\n");
 }
 
-function buildUserPrompt(question, currentFilters, previousQuery) {
+function buildUserPrompt(
+  question,
+  currentFilters,
+  previousQuery,
+  defaultPeriod,
+  resolvedRiding,
+) {
   const context = {
     question: normalizeQuestionForModel(question),
     currentMapFilters: sanitizeMapFilters(currentFilters),
     previousQuery: previousQuery || null,
+    defaultPeriod: defaultPeriod || null,
+    resolvedRiding: resolvedRiding || null,
   };
 
   if (requestsAllPartyCollection(question)) {
@@ -262,7 +350,7 @@ function parseModelOutput(rawOutput) {
   }
 }
 
-function canonicalizeModelQuerySpec(querySpec, question = "") {
+function canonicalizeModelQuerySpec(querySpec, question = "", context = {}) {
   if (!querySpec || typeof querySpec !== "object" || Array.isArray(querySpec)) {
     return querySpec;
   }
@@ -294,6 +382,58 @@ function canonicalizeModelQuerySpec(querySpec, question = "") {
 
   canonical.partyCodes = partyCodes;
 
+  const requestedLimit = requestedResultLimit(question);
+  if (canonical.intent === "ranking" && requestedLimit) {
+    canonical.limit = requestedLimit;
+  }
+
+  if (!explicitYears(question).length && !context.previousQuery) {
+    canonical.endingYear = DEFAULT_QUERY_YEAR;
+    canonical.beginningYear = ["trend", "change"].includes(canonical.intent)
+      ? DEFAULT_TREND_BEGINNING_YEAR
+      : DEFAULT_QUERY_YEAR;
+  }
+
+  if (
+    !explicitYears(question).length
+    && context.previousQuery
+    && ["trend", "change"].includes(canonical.intent)
+    && context.previousQuery.beginningYear === context.previousQuery.endingYear
+  ) {
+    canonical.beginningYear = DEFAULT_TREND_BEGINNING_YEAR;
+    canonical.endingYear = DEFAULT_QUERY_YEAR;
+  }
+
+  if (context.ridingContext?.name && !context.ridingContext.ambiguous) {
+    canonical.regionLevel = "riding";
+    canonical.regionCode = canonical.intent === "ranking" && canonical.groupBy === "riding"
+      ? null
+      : context.ridingContext.name;
+    canonical.provinceCode = context.ridingContext.provinceCode;
+    canonical.regionCodes = [];
+    canonical.boundarySet = context.ridingContext.boundarySet
+      || boundarySetForPeriod(canonical.beginningYear, canonical.endingYear);
+  } else if (
+    context.previousQuery?.regionLevel === "riding"
+    && !requestsGeographicOverride(question)
+  ) {
+    canonical.regionLevel = "riding";
+    canonical.regionCode = canonical.intent === "ranking" && canonical.groupBy === "riding"
+      ? null
+      : context.previousQuery.regionCode;
+    canonical.provinceCode = context.previousQuery.provinceCode;
+    canonical.regionCodes = [];
+    canonical.boundarySet = boundarySetForPeriod(
+      canonical.beginningYear,
+      canonical.endingYear,
+    ) || context.previousQuery.boundarySet;
+  } else if (canonical.regionLevel === "riding") {
+    canonical.boundarySet = boundarySetForPeriod(
+      canonical.beginningYear,
+      canonical.endingYear,
+    ) || canonical.boundarySet;
+  }
+
   if (canonical.intent === "summary" && partyCodes.length <= 1) {
     canonical.groupBy = null;
     canonical.limit = 1;
@@ -320,7 +460,7 @@ function canonicalizeModelQuerySpec(querySpec, question = "") {
 
 async function interpretQuestion(
   { question, currentFilters = null, previousQuery = null },
-  { provider } = {},
+  { provider, ridingResolver } = {},
 ) {
   if (typeof question !== "string" || !question.trim()) {
     throw new AskDataInterpreterError(
@@ -341,52 +481,136 @@ async function interpretQuestion(
     }
   }
 
-  const activeProvider = provider || createAIProvider();
-  const rawOutput = await activeProvider.generateJson({
-    systemPrompt: buildSystemPrompt(),
-    userPrompt: buildUserPrompt(
-      question.trim(),
-      currentFilters,
-      normalizedPreviousQuery,
-    ),
-    jsonSchema: MODEL_OUTPUT_SCHEMA,
-  });
-  const output = parseModelOutput(rawOutput);
-
-  const recoverableAllPartyOutput =
-    output.supported === false
-    && output.querySpec
-    && requestsAllPartyCollection(question);
-
-  if (output.supported === false && !recoverableAllPartyOutput) {
-    return {
-      supported: false,
-      reason: "This question is outside the supported CDMP aggregate queries.",
-    };
-  }
-  if ((!recoverableAllPartyOutput && output.supported !== true) || !output.querySpec) {
-    throw new AskDataInterpreterError(
-      "MALFORMED_MODEL_RESPONSE",
-      "The model returned an invalid response.",
+  const questionPeriod = periodForQuestion(question, normalizedPreviousQuery);
+  const activeRidingResolver = ridingResolver
+    || (!provider ? resolveRidingContext : null);
+  let ridingContext = activeRidingResolver
+    ? await activeRidingResolver(
+      question,
+      questionPeriod.beginningYear,
+      questionPeriod.endingYear,
+    )
+    : null;
+  if (
+    activeRidingResolver
+    && !ridingContext?.name
+    && !ridingContext?.ambiguous
+    && normalizedPreviousQuery?.regionLevel === "riding"
+    && normalizedPreviousQuery.regionCode
+    && !requestsGeographicOverride(question)
+  ) {
+    ridingContext = await activeRidingResolver(
+      `${question} ${normalizedPreviousQuery.regionCode}`,
+      questionPeriod.beginningYear,
+      questionPeriod.endingYear,
     );
   }
+  const defaultPeriod = questionPeriod.isDefault
+    ? {
+      beginningYear: DEFAULT_QUERY_YEAR,
+      endingYear: DEFAULT_QUERY_YEAR,
+      trendBeginningYear: DEFAULT_TREND_BEGINNING_YEAR,
+    }
+    : null;
+  const activeProvider = provider || createAIProvider();
+  const systemPrompt = buildSystemPrompt();
+  const userPrompt = buildUserPrompt(
+    question.trim(),
+    currentFilters,
+    normalizedPreviousQuery,
+    defaultPeriod,
+    ridingContext,
+  );
+  const canRetry = looksLikeAggregateQuestion(question);
+  let fallbackAttempted = false;
 
-  try {
-    return {
-      supported: true,
-      querySpec: validateQuerySpec(
-        canonicalizeModelQuerySpec(output.querySpec, question),
-      ),
-    };
-  } catch (error) {
-    if (error instanceof QuerySpecValidationError) {
+  function validatedFallback() {
+    if (fallbackAttempted) return null;
+    fallbackAttempted = true;
+    const fallback = buildFallbackQuerySpec({
+      question,
+      ridingContext,
+      previousQuery: normalizedPreviousQuery,
+    });
+    if (!fallback) return null;
+    try {
+      return {
+        supported: true,
+        querySpec: validateQuerySpec(fallback),
+      };
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  for (let attempt = 0; attempt < (canRetry ? 2 : 1); attempt += 1) {
+    const rawOutput = await activeProvider.generateJson({
+      systemPrompt: attempt === 0
+        ? systemPrompt
+        : `${systemPrompt}\nThe previous interpretation was unsupported or invalid. Re-evaluate the aggregate question once, preserve every requested scope and filter, and return a valid QuerySpec whenever it can be represented exactly.`,
+      userPrompt,
+      jsonSchema: MODEL_OUTPUT_SCHEMA,
+    });
+    const output = parseModelOutput(rawOutput);
+    const recoverableAllPartyOutput =
+      output.supported === false
+      && output.querySpec
+      && requestsAllPartyCollection(question);
+    const recoverableRidingOutput =
+      output.supported === false
+      && output.querySpec
+      && ridingContext?.name
+      && !ridingContext.ambiguous;
+
+    if (
+      output.supported === false
+      && !recoverableAllPartyOutput
+      && !recoverableRidingOutput
+    ) {
+      const fallback = validatedFallback();
+      if (fallback) return fallback;
+      if (attempt === 0 && canRetry) continue;
+      return {
+        supported: false,
+        reason: "This question is outside the supported CDMP aggregate queries.",
+      };
+    }
+    if (
+      (!recoverableAllPartyOutput && !recoverableRidingOutput && output.supported !== true)
+      || !output.querySpec
+    ) {
+      throw new AskDataInterpreterError(
+        "MALFORMED_MODEL_RESPONSE",
+        "The model returned an invalid response.",
+      );
+    }
+
+    try {
+      return {
+        supported: true,
+        querySpec: validateQuerySpec(
+          canonicalizeModelQuerySpec(output.querySpec, question, {
+            previousQuery: normalizedPreviousQuery,
+            ridingContext,
+          }),
+        ),
+      };
+    } catch (error) {
+      if (!(error instanceof QuerySpecValidationError)) throw error;
+      const fallback = validatedFallback();
+      if (fallback) return fallback;
+      if (attempt === 0 && canRetry) continue;
       throw new AskDataInterpreterError(
         "INVALID_MODEL_QUERY_SPEC",
         "The model returned an unsafe or unsupported query.",
       );
     }
-    throw error;
   }
+
+  throw new AskDataInterpreterError(
+    "INVALID_MODEL_QUERY_SPEC",
+    "The model returned an unsafe or unsupported query.",
+  );
 }
 
 module.exports = {

@@ -48,6 +48,18 @@ describe("Ask Data suggestions", () => {
     );
   });
 
+  it("preserves a named riding in generated follow-ups", () => {
+    expect(generateSuggestions(query({
+      regionLevel: "riding",
+      regionCode: "Ajax",
+      provinceCode: "ON",
+    }))).toEqual([
+      "Show the total donation trend in Ajax, Ontario from 2019 to 2023",
+      "Compare donations across all six parties in Ajax, Ontario in 2023",
+      "Show the same data for 2019",
+    ]);
+  });
+
   it("generates valid range suggestions for a selected party", () => {
     expect(generateSuggestions(query({
       partyCodes: ["LPC"],
