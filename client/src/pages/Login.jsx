@@ -9,15 +9,12 @@ export default function Login() {
 
   async function handleLogin(e) {
     e.preventDefault();
-
     const response = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-
     const data = await response.json();
-
     if (response.ok) {
       localStorage.setItem("token", data.token);
       if (data.requiresPrivacyAgreement) {
@@ -51,6 +48,15 @@ export default function Login() {
           <button type="submit">Log In</button>
         </form>
         <p style={{ marginTop: "16px", fontSize: "13px", textAlign: "center" }}>
+          <button
+            type="button"
+            className="text-link"
+            onClick={() => navigate("/forgot-password")}
+          >
+            Forgot your password?
+          </button>
+        </p>
+        <p style={{ marginTop: "8px", fontSize: "13px", textAlign: "center" }}>
           Don't have an account?{" "}
           <button
             type="button"
@@ -62,5 +68,5 @@ export default function Login() {
         </p>
       </div>
     </div>
-     );
+  );
 }

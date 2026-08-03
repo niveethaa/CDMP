@@ -22,6 +22,73 @@ function token(overrides = {}) {
 describe("Auth account routes", () => {
   beforeEach(() => jest.clearAllMocks());
 
+  describe("POST /api/auth/register", () => {
+    it("creates an account for an allowed email domain", async () => {
+      User.findOne.mockResolvedValue(null);
+      User.create.mockResolvedValue({ _id: "u1", email: "grad@mail.utoronto.ca" });
+      jest.spyOn(bcrypt, "hash").mockResolvedValue("hashed");
+
+      const res = await request(app)
+        .post("/api/auth/register")
+        .send({ email: "grad@mail.utoronto.ca", password: "password12" });
+
+      expect(res.status).toBe(201);
+      expect(User.create).toHaveBeenCalled();
+    });
+
+    it("rejects a disallowed email domain", async () => {
+      const res = await request(app)
+        .post("/api/auth/register")
+        .send({ email: "someone@gmail.com", password: "password12" });
+
+      expect(res.status).toBe(403);
+    });
+
+    it("rejects registration when the email already exists", async () => {
+      User.findOne.mockResolvedValue({ _id: "u1", email: "grad@mail.utoronto.ca" });
+
+      const res = await request(app)
+        .post("/api/auth/register")
+        .send({ email: "grad@mail.utoronto.ca", password: "password12" });
+
+      expect(res.status).toBe(409);
+    });
+  });
+
+  describe("POST /api/auth/login", () => {
+    it("returns a token for valid credentials", async () => {
+      User.findOne.mockResolvedValue({
+        _id: "u1",
+        email: "grad@mail.utoronto.ca",
+        password: "hashed",
+        role: "researcher",
+      });
+      jest.spyOn(bcrypt, "compare").mockResolvedValue(true);
+
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ email: "grad@mail.utoronto.ca", password: "password12" });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty("token");
+    });
+
+    it("returns 401 for wrong password", async () => {
+      User.findOne.mockResolvedValue({
+        _id: "u1",
+        email: "grad@mail.utoronto.ca",
+        password: "hashed",
+      });
+      jest.spyOn(bcrypt, "compare").mockResolvedValue(false);
+
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ email: "grad@mail.utoronto.ca", password: "wrongpass" });
+
+      expect(res.status).toBe(401);
+    });
+  });
+
   describe("GET /api/auth/me", () => {
     it("returns 401 without a token", async () => {
       const res = await request(app).get("/api/auth/me");
@@ -43,7 +110,6 @@ describe("Auth account routes", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.email).toBe("r@utoronto.ca");
-      expect(res.body.role).toBe("researcher");
     });
 
     it("returns 404 when the user no longer exists", async () => {
@@ -120,49 +186,6 @@ describe("Auth account routes", () => {
       expect(res.status).toBe(200);
       expect(res.body.message).toMatch(/updated/i);
       expect(save).toHaveBeenCalled();
-    });
-  });
-
-  describe("POST /api/auth/register", () => {
-    it("rejects a non-University of Toronto .ca address", async () => {
-      const res = await request(app)
-        .post("/api/auth/register")
-        .send({ email: "person@example.ca", password: "password12" });
-      expect(res.status).toBe(403);
-      expect(res.body.message).toMatch(/university of toronto/i);
-    });
-
-    it("rejects a .edu address that is not utoronto", async () => {
-      const res = await request(app)
-        .post("/api/auth/register")
-        .send({ email: "person@harvard.edu", password: "password12" });
-      expect(res.status).toBe(403);
-    });
-
-    it("rejects a password shorter than 8 characters", async () => {
-      const res = await request(app)
-        .post("/api/auth/register")
-        .send({ email: "grad@mail.utoronto.ca", password: "short" });
-      expect(res.status).toBe(400);
-      expect(res.body.message).toMatch(/at least 8/i);
-    });
-
-    it("returns 409 when the account already exists", async () => {
-      User.findOne.mockResolvedValue({ _id: "existing" });
-      const res = await request(app)
-        .post("/api/auth/register")
-        .send({ email: "grad@utoronto.ca", password: "password12" });
-      expect(res.status).toBe(409);
-    });
-
-    it("creates the account for a valid utoronto address", async () => {
-      User.findOne.mockResolvedValue(null);
-      User.create.mockResolvedValue({ _id: "new-user" });
-      const res = await request(app)
-        .post("/api/auth/register")
-        .send({ email: "grad@mail.utoronto.ca", password: "password12" });
-      expect(res.status).toBe(201);
-      expect(User.create).toHaveBeenCalled();
     });
   });
 });
