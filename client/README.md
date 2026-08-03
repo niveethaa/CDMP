@@ -4,6 +4,9 @@ The React frontend provides the donation map, research dashboard, and Ask CDMP
 interface. AI requests are sent to the backend; no provider key belongs in the
 client environment or browser bundle.
 
+The research dashboard loads its paginated records immediately. Analytics
+charts load only after a year is selected and the filters are applied.
+
 ## Docker Setup
 
 Run the complete application from the repository root:

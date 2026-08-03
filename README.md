@@ -277,4 +277,4 @@ by setting `PASSWORD_RESET_PREVIEW=true` in `server/.env`. This exposes the
 short-lived reset link in the browser and must remain disabled outside a
 controlled demonstration.
 
-The user then has access to the dashboard where they can view individual donation records and filter by donor type, province, party, year, riding, and search donor name. They can also export a CSV file of the data. As well as, all the queries and exports are logged to the activity log.
+The user then has access to the dashboard where they can view individual donation records and filter by donor type, province, party, year, riding, and search donor name. They can also export a CSV file. Dashboard charts load after the user selects a year and applies the filters, preventing an expensive all-years aggregation during initial page load. All queries and exports are logged to the activity log.

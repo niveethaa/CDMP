@@ -4,6 +4,9 @@ The Express backend serves map aggregates, authentication, research endpoints,
 and Ask CDMP. Ask CDMP translates supported natural-language questions into a
 validated aggregate QuerySpec before querying MongoDB.
 
+Research analytics require a selected year. Unfiltered all-years analytics are
+rejected so a dashboard visit cannot start a multi-million-record aggregation.
+
 ## Environment Setup
 
 From the `server` directory, create the private environment file:

@@ -6,6 +6,7 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 jest.mock("../src/models/Donation", () => ({
   find: jest.fn(),
   countDocuments: jest.fn(),
+  estimatedDocumentCount: jest.fn(),
   aggregate: jest.fn(),
 }));
 jest.mock("../src/models/ActivityLog", () => ({
@@ -35,6 +36,7 @@ function mockFindReturns(records) {
   };
   Donation.find.mockReturnValue(chain);
   Donation.countDocuments.mockResolvedValue(records.length);
+  Donation.estimatedDocumentCount.mockResolvedValue(records.length);
 }
 describe("Research API access control (UC3)", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -69,6 +71,22 @@ describe("Research API access control (UC3)", () => {
       expect(res.body).toHaveProperty("donations");
       expect(res.body).toHaveProperty("total");
       expect(res.body).toHaveProperty("totalPages");
+      expect(Donation.estimatedDocumentCount).toHaveBeenCalled();
+      expect(Donation.countDocuments).not.toHaveBeenCalled();
+    });
+
+    it("uses an exact count when filters are applied", async () => {
+      mockFindReturns([
+        { party: { code: "CPC" }, contribution: { amountTotal: 300 } },
+      ]);
+
+      const res = await request(app)
+        .get("/api/research/donations?year=2023")
+        .set("Authorization", `Bearer ${researcherToken()}`);
+
+      expect(res.status).toBe(200);
+      expect(Donation.countDocuments).toHaveBeenCalledWith({ "source.year": 2023 });
+      expect(Donation.estimatedDocumentCount).not.toHaveBeenCalled();
     });
   });
   describe("GET /api/research/donations/export — access control", () => {
@@ -127,13 +145,23 @@ describe("Research API access control (UC3)", () => {
       );
 
       const res = await request(app)
-        .get("/api/research/analytics")
+        .get("/api/research/analytics?year=2023")
         .set("Authorization", `Bearer ${researcherToken()}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty("topRidings");
       expect(res.body).toHaveProperty("amountDistribution");
       expect(res.body.topRidings[0]._id).toBe("Toronto Centre");
+    });
+
+    it("rejects analytics without a selected year", async () => {
+      const res = await request(app)
+        .get("/api/research/analytics")
+        .set("Authorization", `Bearer ${researcherToken()}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toMatch(/select a year/i);
+      expect(Donation.aggregate).not.toHaveBeenCalled();
     });
   });
 

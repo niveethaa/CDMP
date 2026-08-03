@@ -36,6 +36,10 @@ const YEARS = [
   ),
 ];
 
+function hasAnalyticsYear(filters) {
+  return filters.year && filters.year !== "ALL";
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
 
@@ -142,18 +146,16 @@ export default function Dashboard() {
     fetchDonations(appliedFilters, page);
   }, [appliedFilters, page, fetchDonations]);
 
-  // Analytics aggregate the full filtered result set, so they only need to
-  // rerun when the filters change — not on every pagination click. Running
-  // them per page triggered two large aggregations over ~5.3M records each
-  // time the user paged through the table.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchAnalytics(appliedFilters);
-  }, [appliedFilters, fetchAnalytics]);
-
   function handleApplyFilters() {
+    const nextFilters = { donorType, province, party, year, riding, search };
     setPage(1);
-    setAppliedFilters({ donorType, province, party, year, riding, search });
+    if (hasAnalyticsYear(nextFilters)) {
+      fetchAnalytics(nextFilters);
+    } else {
+      setAnalytics(null);
+      setAnalyticsError(false);
+    }
+    setAppliedFilters(nextFilters);
   }
 
   function handleClearFilters() {
@@ -163,6 +165,8 @@ export default function Dashboard() {
     setYear("ALL");
     setRiding("");
     setSearch("");
+    setAnalytics(null);
+    setAnalyticsError(false);
     setPage(1);
     setAppliedFilters({
       donorType: "ALL",
@@ -373,7 +377,11 @@ export default function Dashboard() {
           </svg>
           View Public Map
         </button>
-        {analyticsLoading ? (
+        {!hasAnalyticsYear(appliedFilters) ? (
+          <p style={{ color: "#64748b", fontSize: 13, marginTop: 16 }}>
+            Select a year and apply filters to load charts.
+          </p>
+        ) : analyticsLoading ? (
           <p style={{ color: "#64748b", fontSize: 13, marginTop: 16 }}>Loading charts...</p>
         ) : analyticsError ? (
           <p style={{ color: "#64748b", fontSize: 13, marginTop: 16 }}>Charts are unavailable right now.</p>

@@ -72,6 +72,10 @@ function buildDonationQuery({ province, party, year, search, riding, donorType }
   return query;
 }
 
+function hasAnalyticsYear(year) {
+  return Boolean(year && year !== "ALL");
+}
+
 function buildDonorName(donor) {
   if (donor.donorDisplayName) return donor.donorDisplayName;
 
@@ -135,16 +139,20 @@ router.get("/donations", requireAuth, requireResearcher, async (req, res) => {
     const query = buildDonationQuery({ province, party, year, search, riding, donorType });
 
     const skip = (Number(page) - 1) * Number(limit);
+    const totalQuery = Object.keys(query).length === 0
+      ? Donation.estimatedDocumentCount()
+      : Donation.countDocuments(query);
 
-    const donations = await Donation.find(query)
-      .select(
-        "donor.donorFirstName donor.donorMiddleName donor.donorLastName donor.donorDisplayName donor.donorType donor.postalCode party.code contribution.amountTotal contribution.dateReceived geography.ridingName geography.provinceCode"
-      )
-      .skip(skip)
-      .limit(Number(limit))
-      .lean();
-
-    const total = await Donation.countDocuments(query);
+    const [donations, total] = await Promise.all([
+      Donation.find(query)
+        .select(
+          "donor.donorFirstName donor.donorMiddleName donor.donorLastName donor.donorDisplayName donor.donorType donor.postalCode party.code contribution.amountTotal contribution.dateReceived geography.ridingName geography.provinceCode"
+        )
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      totalQuery,
+    ]);
 
     await ActivityLog.create({
       user: req.user.userId,
@@ -203,6 +211,12 @@ router.get("/analytics", requireAuth, requireResearcher, async (req, res) => {
   const { province, party, year, search, riding, donorType } = req.query;
 
   try {
+    if (!hasAnalyticsYear(year)) {
+      return res.status(400).json({
+        message: "Select a year before loading analytics.",
+      });
+    }
+
     const query = buildDonationQuery({ province, party, year, search, riding, donorType });
 
     const [topRidings, amountDistribution] = await Promise.all([
