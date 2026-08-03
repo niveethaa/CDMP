@@ -361,10 +361,28 @@ export default function DonationMap({
       )}
 
       {activeGeoData && !geoError && !ridingGeoError && (
-        <div className="map-legend">
-          <div className="legend-title">
-            Dominant party · Shade = {metricMode === "donation_count" ? "donation count" : "donation amount"}
+        <div className="map-legend" aria-label="Map legend">
+          <div className="legend-header">
+            <span className="legend-title">How to read the map</span>
+            <span className="legend-metric">
+              {metricMode === "donation_count" ? "Donation count" : "Donation amount"}
+            </span>
           </div>
+          <div className="legend-guide">
+            <p>
+              <strong>Region colour</strong>
+              {metricMode === "donation_count"
+                ? " shows the party that received the most donations."
+                : " shows the party that raised the most money."}
+            </p>
+            <p>
+              <strong>Darker regions</strong>
+              {metricMode === "donation_count"
+                ? " have more donations."
+                : " have a higher donation total."}
+            </p>
+          </div>
+          <div className="legend-party-label">Party colours</div>
           <div className="legend-items">
             {Object.entries(PARTY_COLORS)
               .filter(([code]) => code !== "UNKNOWN")
